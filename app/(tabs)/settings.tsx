@@ -16,7 +16,10 @@ export default function SettingsScreen() {
   );
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 100 }}
+    >
       <View style={styles.section}>
         <Text style={styles.sectionHeader}>백업 및 데이터</Text>
         <MenuItem 

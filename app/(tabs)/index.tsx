@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { CircularClock } from '../../src/components/CircularClock';
 import { ScheduleService } from '../../src/services/ScheduleService';
 import { Schedule } from '../../src/types';
 import { Plus } from 'lucide-react-native';
 import { format } from 'date-fns';
+import AddScheduleModal from '../../src/components/AddScheduleModal';
 
 export default function TodayScreen() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
   const today = format(new Date(), 'yyyy-MM-dd');
 
   useEffect(() => {
@@ -17,36 +19,39 @@ export default function TodayScreen() {
 
   const loadSchedules = async () => {
     try {
-      let data = await ScheduleService.getSchedulesForDate(today);
-      if (data.length === 0) {
-        // Create dummy data for testing
-        await ScheduleService.createSchedule({
-          title: '잠',
-          start_time: '00:00',
-          end_time: '07:00',
-          color: '#94A3B8',
-          day_of_week: new Date().getDay(),
-        });
-        await ScheduleService.createSchedule({
-          title: '운동',
-          start_time: '07:30',
-          end_time: '09:00',
-          color: COLORS.chart[0],
-          day_of_week: new Date().getDay(),
-        });
-        await ScheduleService.createSchedule({
-          title: '업무',
-          start_time: '10:00',
-          end_time: '18:00',
-          color: COLORS.chart[1],
-          day_of_week: new Date().getDay(),
-        });
-        data = await ScheduleService.getSchedulesForDate(today);
-      }
+      const data = await ScheduleService.getSchedulesForDate(today);
       setSchedules(data);
     } catch (error) {
       console.error('Failed to load schedules:', error);
     }
+  };
+
+  const handleAddSchedule = async (newSchedule: any) => {
+    try {
+      await ScheduleService.createSchedule({
+        ...newSchedule,
+        target_date: today,
+        day_of_week: new Date().getDay(),
+      });
+      setModalVisible(false);
+      loadSchedules();
+    } catch (error) {
+      Alert.alert('오류', '일정을 저장하지 못했습니다.');
+    }
+  };
+
+  const handleDeleteSchedule = (id: string) => {
+    Alert.alert('일정 삭제', '정말로 이 일정을 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      { 
+        text: '삭제', 
+        style: 'destructive',
+        onPress: async () => {
+          await ScheduleService.deleteSchedule(id);
+          loadSchedules();
+        }
+      },
+    ]);
   };
 
   const chartData = schedules.map(s => ({
@@ -71,7 +76,10 @@ export default function TodayScreen() {
         <View style={styles.listContainer}>
           <View style={styles.headerRow}>
             <Text style={styles.sectionTitle}>오늘의 일정</Text>
-            <TouchableOpacity style={styles.addButton}>
+            <TouchableOpacity 
+              style={styles.addButton}
+              onPress={() => setModalVisible(true)}
+            >
               <Plus color={COLORS.surface} size={20} />
             </TouchableOpacity>
           </View>
@@ -82,7 +90,11 @@ export default function TodayScreen() {
             </View>
           ) : (
             schedules.map((item) => (
-              <View key={item.id} style={styles.scheduleItem}>
+              <TouchableOpacity 
+                key={item.id} 
+                style={styles.scheduleItem}
+                onLongPress={() => handleDeleteSchedule(item.id)}
+              >
                 <View style={[styles.colorIndicator, { backgroundColor: item.color }]} />
                 <View style={styles.scheduleInfo}>
                   <Text style={styles.scheduleTitle}>{item.title}</Text>
@@ -90,11 +102,17 @@ export default function TodayScreen() {
                     {item.start_time} - {item.end_time}
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           )}
         </View>
       </ScrollView>
+
+      <AddScheduleModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSave={handleAddSchedule}
+      />
     </View>
   );
 }
@@ -106,7 +124,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: SPACING.md,
-    paddingBottom: 100,
+    paddingBottom: 120, // Increased for safe area
   },
   clockContainer: {
     alignItems: 'center',

@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, FlatList } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, FlatList, Alert } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { TodoService } from '../../src/services/TodoService';
 import { Todo } from '../../src/types';
 import { CheckCircle2, Circle, Plus } from 'lucide-react-native';
 import { format } from 'date-fns';
+import AddTodoModal from '../../src/components/AddTodoModal';
 
 export default function TodoScreen() {
   const [tab, setTab] = useState<'habit' | 'daily'>('habit');
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
   const today = format(new Date(), 'yyyy-MM-dd');
 
   useEffect(() => {
@@ -17,28 +19,24 @@ export default function TodoScreen() {
 
   const loadTodos = async () => {
     try {
-      let data = await TodoService.getTodos(tab, today);
-      if (data.length === 0) {
-        if (tab === 'habit') {
-          await TodoService.createTodo({
-            content: '물 2L 마시기',
-            is_completed: 0,
-            type: 'habit',
-            habit_days: '1,2,3,4,5,6,0',
-          });
-        } else {
-          await TodoService.createTodo({
-            content: '오늘의 회고 작성',
-            is_completed: 0,
-            type: 'daily',
-            target_date: today,
-          });
-        }
-        data = await TodoService.getTodos(tab, today);
-      }
+      const data = await TodoService.getTodos(tab, today);
       setTodos(data);
     } catch (error) {
       console.error('Failed to load todos:', error);
+    }
+  };
+
+  const handleAddTodo = async (newTodo: any) => {
+    try {
+      await TodoService.createTodo({
+        ...newTodo,
+        is_completed: 0,
+        target_date: tab === 'daily' ? today : null,
+        habit_days: tab === 'habit' ? '1,2,3,4,5,6,0' : null,
+      });
+      loadTodos();
+    } catch (error) {
+      Alert.alert('오류', '할 일을 저장하지 못했습니다.');
     }
   };
 
@@ -51,10 +49,25 @@ export default function TodoScreen() {
     }
   };
 
+  const handleDeleteTodo = (id: string) => {
+    Alert.alert('할 일 삭제', '정말로 이 항목을 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      { 
+        text: '삭제', 
+        style: 'destructive',
+        onPress: async () => {
+          await TodoService.deleteTodo(id);
+          loadTodos();
+        }
+      },
+    ]);
+  };
+
   const renderItem = ({ item }: { item: Todo }) => (
     <TouchableOpacity 
       style={styles.todoItem} 
       onPress={() => handleToggle(item.id, item.is_completed)}
+      onLongPress={() => handleDeleteTodo(item.id)}
     >
       {item.is_completed === 1 ? (
         <CheckCircle2 color={COLORS.primary} size={24} />
@@ -98,9 +111,19 @@ export default function TodoScreen() {
         }
       />
       
-      <TouchableOpacity style={styles.fab}>
+      <TouchableOpacity 
+        style={styles.fab}
+        onPress={() => setModalVisible(true)}
+      >
         <Plus color={COLORS.surface} size={24} />
       </TouchableOpacity>
+
+      <AddTodoModal
+        visible={modalVisible}
+        type={tab}
+        onClose={() => setModalVisible(false)}
+        onSave={handleAddTodo}
+      />
     </View>
   );
 }
@@ -137,7 +160,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: SPACING.md,
-    paddingBottom: 100,
+    paddingBottom: 120, // Increased for safe area
   },
   todoItem: {
     flexDirection: 'row',

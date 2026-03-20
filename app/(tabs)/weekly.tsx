@@ -1,16 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
 import { COLORS, SPACING } from '../../src/constants/theme';
 import { WeeklyGrid } from '../../src/components/WeeklyGrid';
 import { ScheduleService } from '../../src/services/ScheduleService';
 import { Schedule } from '../../src/types';
-import { startOfWeek, endOfWeek, format, addDays } from 'date-fns';
+import { startOfWeek, format, addDays } from 'date-fns';
+import AddScheduleModal from '../../src/components/AddScheduleModal';
 
 export default function WeeklyScreen() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
+  
   const today = new Date();
-  const weekStart = startOfWeek(today, { weekStartsOn: 0 }); // Sunday
-  const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
+  const start = startOfWeek(today, { weekStartsOn: 1 });
 
   useEffect(() => {
     loadWeeklySchedules();
@@ -18,33 +21,67 @@ export default function WeeklyScreen() {
 
   const loadWeeklySchedules = async () => {
     try {
-      // For simplicity, we fetch all schedules that are recurring (have day_of_week)
-      // or specific to this week's dates.
-      // In a real app, we might need a more complex query.
       const allSchedules: Schedule[] = [];
-      const db = await ScheduleService.getDb();
-      
-      const results = await db.getAllAsync<Schedule>(
-        'SELECT * FROM schedules WHERE is_deleted = 0 AND (day_of_week IS NOT NULL OR (target_date BETWEEN ? AND ?))',
-        [format(weekStart, 'yyyy-MM-dd'), format(weekEnd, 'yyyy-MM-dd')]
-      );
-      
-      setSchedules(results);
+      for (let i = 0; i < 7; i++) {
+        const date = format(addDays(start, i), 'yyyy-MM-dd');
+        const daySchedules = await ScheduleService.getSchedulesForDate(date);
+        allSchedules.push(...daySchedules);
+      }
+      setSchedules(allSchedules);
     } catch (error) {
       console.error('Failed to load weekly schedules:', error);
     }
   };
 
+  const handleAddSchedule = async (newSchedule: any) => {
+    try {
+      await ScheduleService.createSchedule({
+        ...newSchedule,
+        day_of_week: selectedDay,
+      });
+      setModalVisible(false);
+      loadWeeklySchedules();
+    } catch (error) {
+      Alert.alert('오류', '일정을 저장하지 못했습니다.');
+    }
+  };
+
+  const handleDeleteSchedule = (id: string) => {
+    Alert.alert('일정 삭제', '정말로 이 일정을 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      { 
+        text: '삭제', 
+        style: 'destructive',
+        onPress: async () => {
+          await ScheduleService.deleteSchedule(id);
+          loadWeeklySchedules();
+        }
+      },
+    ]);
+  };
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.weekTitle}>
-          {format(weekStart, 'MM.dd')} - {format(weekEnd, 'MM.dd')}
-        </Text>
-      </View>
-      <View style={styles.content}>
-        <WeeklyGrid schedules={schedules} />
-      </View>
+      <WeeklyGrid 
+        schedules={schedules} 
+        onPressSchedule={(s) => handleDeleteSchedule(s.id)}
+      />
+      
+      <TouchableOpacity 
+        style={styles.fab}
+        onPress={() => {
+          setSelectedDay(new Date().getDay());
+          setModalVisible(true);
+        }}
+      >
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
+
+      <AddScheduleModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSave={handleAddSchedule}
+      />
     </View>
   );
 }
@@ -54,20 +91,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
-    padding: SPACING.md,
-    backgroundColor: COLORS.surface,
+  fab: {
+    position: 'absolute',
+    right: SPACING.lg,
+    bottom: SPACING.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
-  weekTitle: {
-    fontSize: 18,
+  fabText: {
+    fontSize: 24,
+    color: COLORS.surface,
     fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  content: {
-    flex: 1,
-    padding: SPACING.sm,
   },
 });

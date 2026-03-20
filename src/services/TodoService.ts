@@ -1,17 +1,11 @@
 import * as SQLite from 'expo-sqlite';
 import * as Crypto from 'expo-crypto';
 import { Todo } from '../types';
-
-const DB_NAME = 'jplan.db';
+import { getDb } from './database';
 
 export class TodoService {
-  private static db: SQLite.SQLiteDatabase | null = null;
-
   static async getDb() {
-    if (!this.db) {
-      this.db = await SQLite.openDatabaseAsync(DB_NAME);
-    }
-    return this.db;
+    return await getDb();
   }
 
   static async createTodo(todo: Omit<Todo, 'id' | 'created_at' | 'updated_at' | 'is_deleted'>) {

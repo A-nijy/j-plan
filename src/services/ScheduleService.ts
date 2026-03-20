@@ -1,30 +1,31 @@
 import * as SQLite from 'expo-sqlite';
 import * as Crypto from 'expo-crypto';
 import { Schedule } from '../types';
-
-const DB_NAME = 'jplan.db';
+import { getDb } from './database';
 
 export class ScheduleService {
-  private static db: SQLite.SQLiteDatabase | null = null;
-
   static async getDb() {
-    if (!this.db) {
-      this.db = await SQLite.openDatabaseAsync(DB_NAME);
-    }
-    return this.db;
+    const db = await getDb();
+    if (!db) throw new Error('Database not initialized');
+    return db;
   }
 
   static async createSchedule(schedule: Omit<Schedule, 'id' | 'created_at' | 'updated_at' | 'is_deleted'>) {
-    const db = await this.getDb();
-    const id = Crypto.randomUUID();
-    const now = new Date().toISOString();
-    
-    await db.runAsync(
-      `INSERT INTO schedules (id, title, description, start_time, end_time, color, day_of_week, target_date, created_at, updated_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, schedule.title, schedule.description || null, schedule.start_time, schedule.end_time, schedule.color, schedule.day_of_week ?? null, schedule.target_date || null, now, now]
-    );
-    return id;
+    try {
+      const db = await this.getDb();
+      const id = Crypto.randomUUID();
+      const now = new Date().toISOString();
+      
+      await db.runAsync(
+        `INSERT INTO schedules (id, title, description, start_time, end_time, color, day_of_week, target_date, created_at, updated_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, schedule.title, schedule.description || null, schedule.start_time, schedule.end_time, schedule.color, schedule.day_of_week ?? null, schedule.target_date || null, now, now]
+      );
+      return id;
+    } catch (error) {
+      console.error('Database INSERT error:', error);
+      throw error;
+    }
   }
 
   static async getSchedulesForDate(date: string) {

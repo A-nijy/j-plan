@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { Schedule } from '../types';
 
@@ -9,9 +9,10 @@ const HOUR_HEIGHT = 60;
 
 interface WeeklyGridProps {
   schedules: Schedule[];
+  onPressSchedule?: (schedule: Schedule) => void;
 }
 
-export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules }) => {
+export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedule }) => {
   const hours = [...Array(15)].map((_, i) => i + 8); // 8:00 to 22:00
 
   const getScheduleStyle = (schedule: Schedule) => {
@@ -61,14 +62,15 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules }) => {
             ))}
             
             {schedules.map((s) => (
-              <View
+              <TouchableOpacity
                 key={s.id}
                 style={[styles.scheduleBlock, getScheduleStyle(s)]}
+                onPress={() => onPressSchedule?.(s)}
               >
                 <Text style={styles.scheduleTitle} numberOfLines={2}>
                   {s.title}
                 </Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
