@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity, ScrollView, Platform, FlatList } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity, ScrollView, Platform, FlatList, Dimensions } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
-import { X, Clock, Check } from 'lucide-react-native';
+import { X, Clock, Check, Calendar, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { format } from 'date-fns';
+import { 
+  format, parseISO, getYear, getMonth, getDate, lastDayOfMonth,
+  startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval,
+  isSameMonth, addMonths, isSameDay
+} from 'date-fns';
+import { ko } from 'date-fns/locale';
+import WheelPicker from 'react-native-wheely';
 
 interface AddScheduleModalProps {
   visible: boolean;
@@ -14,7 +20,10 @@ interface AddScheduleModalProps {
     start_time: string;
     end_time: string;
     color: string;
+    target_date: string;
   }) => void;
+  initialDate?: string; // YYYY-MM-DD
+  showDatePicker?: boolean;
 }
 
 const PRESET_COLORS = [
@@ -32,10 +41,9 @@ const PRESET_COLORS = [
   '#E9ECEF', // Neutral Gray
 ];
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
-const MINUTES = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
-
-import WheelPicker from 'react-native-wheely';
+const AMPMS = ['오전', '오후'];
+const HOURS_12 = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
+const MINUTES_60 = Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0'));
 
 interface TimePickerModalProps {
   visible: boolean;
@@ -46,18 +54,13 @@ interface TimePickerModalProps {
   title: string;
 }
 
-const AMPMS = ['오전', '오후'];
-const HOURS_12 = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
-const MINUTES_60 = Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0'));
-
 const TimePickerModal = ({ visible, onClose, onConfirm, initialHour24, initialMinute, title }: TimePickerModalProps) => {
   const [ampm, setAmpm] = useState('오전');
   const [h12, setH12] = useState('12');
   const [minute, setMinute] = useState('00');
   const [nonce, setNonce] = useState(0);
 
-  // Sync state when modal becomes visible or initial values change
-  React.useEffect(() => {
+  useEffect(() => {
     if (visible) {
       const h24 = parseInt(initialHour24);
       setAmpm(h24 >= 12 ? '오후' : '오전');
@@ -66,7 +69,7 @@ const TimePickerModal = ({ visible, onClose, onConfirm, initialHour24, initialMi
       const m = parseInt(initialMinute);
       const snappedM = (Math.round(m / 5) * 5 % 60).toString().padStart(2, '0');
       setMinute(snappedM);
-      setNonce(n => n + 1); // Force pickers to re-mount/reset
+      setNonce(n => n + 1);
     }
   }, [visible, initialHour24, initialMinute]);
 
@@ -86,9 +89,7 @@ const TimePickerModal = ({ visible, onClose, onConfirm, initialHour24, initialMi
       <View style={styles.pickerOverlay}>
         <View style={styles.pickerContent}>
           <Text style={styles.pickerTitle}>{title}</Text>
-          
           <View style={styles.pickerRow}>
-            {/* AM/PM */}
             <View style={{ width: 80 }}>
               <WheelPicker
                 key={`ampm-${nonce}`}
@@ -100,8 +101,6 @@ const TimePickerModal = ({ visible, onClose, onConfirm, initialHour24, initialMi
                 itemHeight={44}
               />
             </View>
-            
-            {/* Hour */}
             <View style={{ width: 60 }}>
               <WheelPicker
                 key={`hour-${nonce}`}
@@ -113,10 +112,7 @@ const TimePickerModal = ({ visible, onClose, onConfirm, initialHour24, initialMi
                 itemHeight={44}
               />
             </View>
-
             <Text style={styles.separator}>:</Text>
-
-            {/* Minute */}
             <View style={{ width: 60 }}>
               <WheelPicker
                 key={`min-${nonce}`}
@@ -143,8 +139,122 @@ const TimePickerModal = ({ visible, onClose, onConfirm, initialHour24, initialMi
   );
 };
 
+interface DatePickerModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onConfirm: (date: string) => void;
+  initialDate: string;
+  title: string;
+}
 
-export default function AddScheduleModal({ visible, onClose, onSave }: AddScheduleModalProps) {
+const DatePickerModal = ({ visible, onClose, onConfirm, initialDate, title }: DatePickerModalProps) => {
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  useEffect(() => {
+    if (visible) {
+      const d = parseISO(initialDate || format(new Date(), 'yyyy-MM-dd'));
+      setCurrentMonth(startOfMonth(d));
+      setSelectedDate(d);
+    }
+  }, [visible, initialDate]);
+
+  const renderHeader = () => (
+    <View style={styles.calendarNav}>
+      <TouchableOpacity style={styles.navBtn} onPress={() => setCurrentMonth(addMonths(currentMonth, -1))}>
+        <ChevronLeft size={24} color={COLORS.text} />
+      </TouchableOpacity>
+      <Text style={styles.calendarMonthText}>
+        {format(currentMonth, 'yyyy년 M월', { locale: ko })}
+      </Text>
+      <TouchableOpacity style={styles.navBtn} onPress={() => setCurrentMonth(addMonths(currentMonth, 1))}>
+        <ChevronRight size={24} color={COLORS.text} />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderDays = () => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(monthStart);
+    const startDate = startOfWeek(monthStart, { weekStartsOn: 0 });
+    const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 });
+
+    const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
+    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+
+    return (
+      <View style={styles.calendarGrid}>
+        <View style={styles.weekdayRow}>
+          {weekdays.map((day, i) => (
+            <Text key={day} style={[styles.weekdayText, i === 0 && { color: '#FFADAD' }, i === 6 && { color: '#A0C4FF' }]}>
+              {day}
+            </Text>
+          ))}
+        </View>
+        <View style={styles.daysGrid}>
+          {calendarDays.map((date, i) => {
+            const isCurrentMonth = isSameMonth(date, monthStart);
+            const isSelected = isSameDay(date, selectedDate);
+            const isSun = date.getDay() === 0;
+            const isSat = date.getDay() === 6;
+
+            return (
+              <TouchableOpacity
+                key={i}
+                style={[
+                  styles.dayCell,
+                  isSelected && styles.selectedDayCell,
+                ]}
+                onPress={() => setSelectedDate(date)}
+              >
+                <Text style={[
+                  styles.dayText,
+                  !isCurrentMonth && styles.otherMonthText,
+                  isSelected && styles.selectedDayText,
+                  !isSelected && isSun && { color: '#FFADAD' },
+                  !isSelected && isSat && { color: '#A0C4FF' },
+                ]}>
+                  {format(date, 'd')}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={styles.pickerOverlay}>
+        <View style={styles.calendarContent}>
+          <Text style={styles.pickerTitle}>{title}</Text>
+          {renderHeader()}
+          {renderDays()}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+              <Text style={styles.cancelButtonText}>취소</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.confirmButtonSmall} 
+              onPress={() => onConfirm(format(selectedDate, 'yyyy-MM-dd'))}
+            >
+              <Text style={styles.confirmButtonText}>확인</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+export default function AddScheduleModal({ 
+  visible, 
+  onClose, 
+  onSave, 
+  initialDate = format(new Date(), 'yyyy-MM-dd'),
+  showDatePicker = false
+}: AddScheduleModalProps) {
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -153,8 +263,15 @@ export default function AddScheduleModal({ visible, onClose, onSave }: AddSchedu
   const [endHour, setEndHour] = useState('10');
   const [endMin, setEndMin] = useState('00');
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
+  const [selectedDate, setSelectedDate] = useState(initialDate);
   
-  const [showPicker, setShowPicker] = useState<'start' | 'end' | null>(null);
+  const [showPicker, setShowPicker] = useState<'start' | 'end' | 'date' | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      setSelectedDate(initialDate);
+    }
+  }, [visible, initialDate]);
 
   const handleSave = () => {
     if (!title.trim()) return;
@@ -164,6 +281,7 @@ export default function AddScheduleModal({ visible, onClose, onSave }: AddSchedu
       start_time: `${startHour}:${startMin}`,
       end_time: `${endHour}:${endMin}`,
       color: selectedColor,
+      target_date: selectedDate,
     });
     resetAndClose();
   };
@@ -179,14 +297,19 @@ export default function AddScheduleModal({ visible, onClose, onSave }: AddSchedu
     onClose();
   };
 
-  const onConfirmPicker = (h: string, m: string) => {
+  const onConfirmTimePicker = (h: string, m: string) => {
     if (showPicker === 'start') {
       setStartHour(h);
       setStartMin(m);
-    } else {
+    } else if (showPicker === 'end') {
       setEndHour(h);
       setEndMin(m);
     }
+    setShowPicker(null);
+  };
+
+  const onConfirmDatePicker = (date: string) => {
+    setSelectedDate(date);
     setShowPicker(null);
   };
 
@@ -209,6 +332,21 @@ export default function AddScheduleModal({ visible, onClose, onSave }: AddSchedu
               value={title}
               onChangeText={setTitle}
             />
+
+            {showDatePicker && (
+              <>
+                <Text style={styles.label}>날짜</Text>
+                <TouchableOpacity 
+                  style={styles.timeInput}
+                  onPress={() => setShowPicker('date')}
+                >
+                  <Calendar size={16} color={COLORS.textSecondary} />
+                  <Text style={styles.timeText}>
+                    {format(parseISO(selectedDate), 'yyyy년 MM월 dd일 (EEEE)', { locale: ko })}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
 
             <View style={styles.row}>
               <TouchableOpacity 
@@ -267,12 +405,20 @@ export default function AddScheduleModal({ visible, onClose, onSave }: AddSchedu
       </View>
 
       <TimePickerModal 
-        visible={!!showPicker}
+        visible={showPicker === 'start' || showPicker === 'end'}
         onClose={() => setShowPicker(null)}
-        onConfirm={onConfirmPicker}
+        onConfirm={onConfirmTimePicker}
         initialHour24={showPicker === 'start' ? startHour : endHour}
         initialMinute={showPicker === 'start' ? startMin : endMin}
         title={showPicker === 'start' ? '시작 시간 선택' : '종료 시간 선택'}
+      />
+
+      <DatePickerModal
+        visible={showPicker === 'date'}
+        onClose={() => setShowPicker(null)}
+        onConfirm={onConfirmDatePicker}
+        initialDate={selectedDate}
+        title="날짜 선택"
       />
     </Modal>
   );
@@ -381,11 +527,73 @@ const styles = StyleSheet.create({
     width: '85%',
     alignItems: 'center',
   },
+  calendarContent: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    width: '90%',
+  },
   pickerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.text,
     marginBottom: SPACING.lg,
+    textAlign: 'center',
+  },
+  calendarNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  navBtn: {
+    padding: SPACING.xs,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.background,
+  },
+  calendarMonthText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  calendarGrid: {
+    marginBottom: SPACING.md,
+  },
+  weekdayRow: {
+    flexDirection: 'row',
+    marginBottom: SPACING.xs,
+  },
+  weekdayText: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: COLORS.textSecondary,
+  },
+  daysGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  dayCell: {
+    width: `${100 / 7}%`,
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: BORDER_RADIUS.md,
+  },
+  selectedDayCell: {
+    backgroundColor: COLORS.primary,
+  },
+  dayText: {
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  selectedDayText: {
+    color: COLORS.surface,
+    fontWeight: 'bold',
+  },
+  otherMonthText: {
+    color: COLORS.border,
   },
   pickerRow: {
     flexDirection: 'row',
@@ -393,10 +601,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     paddingHorizontal: SPACING.md,
-  },
-  wheelItem: {
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   wheelItemText: {
     fontSize: 20,
@@ -406,11 +610,6 @@ const styles = StyleSheet.create({
   wheelIndicator: {
     backgroundColor: COLORS.primary + '15',
     borderRadius: BORDER_RADIUS.md,
-  },
-  selectedWheelText: {
-    fontSize: 22,
-    color: COLORS.primary,
-    fontWeight: 'bold',
   },
   separator: {
     fontSize: 20,

@@ -110,18 +110,16 @@ export default function WeeklyScreen() {
     );
   };
 
-  const handleAddSchedule = async (newSchedule: any) => {
+  const handleAddSchedule = async (newSchedule: {
+    title: string;
+    description: string;
+    start_time: string;
+    end_time: string;
+    color: string;
+    target_date: string;
+  }) => {
     try {
-      // Calculate the specific date for the selected day in the current week
-      // (selectedDay: 0=Sun, 1=Mon...)
-      // Offset from Monday: (1+6)%7=0, (0+6)%7=6
-      const dayOffset = (selectedDay + 6) % 7;
-      const targetDate = format(addDays(currentWeekStart, dayOffset), 'yyyy-MM-dd');
-
-      await ScheduleService.createSchedule({
-        ...newSchedule,
-        target_date: targetDate,
-      });
+      await ScheduleService.createSchedule(newSchedule);
       setModalVisible(false);
       loadWeeklySchedules();
     } catch (error) {
@@ -193,6 +191,8 @@ export default function WeeklyScreen() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSave={handleAddSchedule}
+        showDatePicker={true}
+        initialDate={format(addDays(currentWeekStart, (selectedDay + 6) % 7), 'yyyy-MM-dd')}
       />
 
       {settings && (

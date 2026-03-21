@@ -26,12 +26,16 @@ export default function TodayScreen() {
     }
   };
 
-  const handleAddSchedule = async (newSchedule: any) => {
+  const handleAddSchedule = async (newSchedule: {
+    title: string;
+    description: string;
+    start_time: string;
+    end_time: string;
+    color: string;
+    target_date: string;
+  }) => {
     try {
-      await ScheduleService.createSchedule({
-        ...newSchedule,
-        target_date: today,
-      });
+      await ScheduleService.createSchedule(newSchedule);
       setModalVisible(false);
       loadSchedules();
     } catch (error) {
@@ -111,6 +115,8 @@ export default function TodayScreen() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSave={handleAddSchedule}
+        showDatePicker={false}
+        initialDate={today}
       />
     </View>
   );
