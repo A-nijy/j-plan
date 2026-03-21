@@ -3,21 +3,19 @@ import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { Schedule } from '../types';
 
-const { width } = Dimensions.get('window');
-const COLUMN_WIDTH = (width - 60) / 7;
 const HOUR_HEIGHT = 60;
-
+ 
 import { startOfWeek, format, addDays, isSameDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { WeeklySettings } from '../services/WeeklySettingsService';
-
+ 
 interface WeeklyGridProps {
   schedules: Schedule[];
   onPressSchedule?: (schedule: Schedule) => void;
   startDate?: Date;
   settings: WeeklySettings;
 }
-
+ 
 export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedule, startDate = new Date(), settings }) => {
   const { start_hour, end_hour, grid_interval } = settings;
   const hours = [];
@@ -25,32 +23,28 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
     hours.push(i);
   }
   
-  const weekStart = startOfWeek(startDate, { weekStartsOn: 1 }); // Start from Monday
+  const weekStart = startOfWeek(startDate, { weekStartsOn: 1 }); // Monday
   const today = new Date();
  
   const getScheduleStyle = (schedule: Schedule) => {
     const [startH, startM] = schedule.start_time.split(':').map(Number);
     const [endH, endM] = schedule.end_time.split(':').map(Number);
     
-    // Position relative to start_hour
     const top = (startH - start_hour) * HOUR_HEIGHT + (startM / 60) * HOUR_HEIGHT;
     const height = (endH - startH) * HOUR_HEIGHT + ((endM - startM) / 60) * HOUR_HEIGHT;
     
-    // Calculate dayIndex: prefer day_of_week, fallback to target_date
     let dayIndex = 0;
     if (schedule.day_of_week !== null && schedule.day_of_week !== undefined) {
       dayIndex = (schedule.day_of_week + 6) % 7;
     } else if (schedule.target_date) {
       dayIndex = (new Date(schedule.target_date).getDay() + 6) % 7;
     }
-
-    const left = dayIndex * COLUMN_WIDTH;
  
     return {
       top,
       height,
-      left,
-      width: COLUMN_WIDTH - 2,
+      left: `${(dayIndex * 100) / 7}%`,
+      width: `${100 / 7}%`,
       backgroundColor: schedule.color,
     };
   };
@@ -60,7 +54,7 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
  
   return (
     <View style={styles.container}>
-      {/* Day Labels with Dates */}
+      {/* Day Header */}
       <View style={styles.dayHeader}>
         <View style={styles.hourColPlaceholder} />
         {weekDates.map((date, i) => {
@@ -68,7 +62,7 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
           return (
             <View key={i} style={[styles.dayLabel, isToday && styles.todayLabel]}>
               <Text style={[styles.dayText, isToday && styles.todayDayText]}>
-                {format(date, 'eee', { locale: ko })}
+                {format(date, 'E', { locale: ko })}
               </Text>
               <Text style={[styles.dateText, isToday && styles.todayDateText]}>
                 {format(date, 'd')}
@@ -78,7 +72,11 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
         })}
       </View>
  
-      <ScrollView style={styles.gridScroll}>
+      <ScrollView 
+        style={styles.gridScroll} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
         <View style={styles.gridBody}>
           {/* Hour Labels */}
           <View style={styles.hourColumn}>
@@ -91,35 +89,51 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
  
           {/* Grid lines and Schedules */}
           <View style={styles.slotsContainer}>
-            {hours.map((h) => (
+            {/* Background Vertical Grid Lines */}
+            <View style={styles.verticalLinesContainer}>
+              {Array.from({ length: 7 }).map((_, i) => (
+                <View key={i} style={styles.verticalLine} />
+              ))}
+            </View>
+
+            {/* Horizontal Grid Lines */}
+            {hours.map((h, hIdx) => (
               <View key={h} style={styles.hourSlot}>
-                {Array.from({ length: subLinesCount }).map((_, i) => (
-                  <View 
-                    key={i} 
-                    style={[
-                      styles.gridLine, 
-                      { height: HOUR_HEIGHT / subLinesCount },
-                      i > 0 && { borderStyle: 'dashed', borderBottomColor: COLORS.border + '50' }
-                    ]} 
-                  />
-                ))}
+                {Array.from({ length: subLinesCount }).map((_, i) => {
+                  const isLastHour = hIdx === hours.length - 1;
+                  const isLastSubLine = i === subLinesCount - 1;
+                  
+                  return (
+                    <View 
+                      key={i} 
+                      style={[
+                        styles.gridLine, 
+                        { height: HOUR_HEIGHT / subLinesCount },
+                        i === 0 ? { borderTopWidth: 1, borderTopColor: COLORS.border + '70' } : { borderTopWidth: 1, borderTopColor: COLORS.border + '20', borderStyle: 'dashed' },
+                        isLastHour && isLastSubLine && { borderBottomWidth: 1, borderBottomColor: COLORS.border + '70' }
+                      ]} 
+                    />
+                  );
+                })}
               </View>
             ))}
             
+            {/* Schedule Blocks */}
             {schedules.map((s) => {
               const style = getScheduleStyle(s);
-              // Only render if it's within the visible hour range
               if (style.top < 0 || style.top >= hours.length * HOUR_HEIGHT) return null;
               
               return (
                 <TouchableOpacity
                   key={s.id}
-                  style={[styles.scheduleBlock, style]}
+                  style={[styles.scheduleBlock, { top: style.top, height: style.height, left: style.left as any, width: style.width as any }]}
                   onPress={() => onPressSchedule?.(s)}
                 >
-                  <Text style={styles.scheduleTitle} numberOfLines={2}>
-                    {s.title}
-                  </Text>
+                  <View style={[styles.scheduleInner, { backgroundColor: style.backgroundColor }]}>
+                    <Text style={styles.scheduleTitle} numberOfLines={2}>
+                      {s.title}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -129,7 +143,7 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
     </View>
   );
 };
-
+ 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -196,24 +210,39 @@ const styles = StyleSheet.create({
   },
   hourText: {
     fontSize: 10,
+    lineHeight: 12,
     color: COLORS.textSecondary,
+    marginTop: -10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   slotsContainer: {
     flex: 1,
     position: 'relative',
   },
+  verticalLinesContainer: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: 'row',
+  },
+  verticalLine: {
+    flex: 1,
+    borderLeftWidth: 0, // Make vertical lines invisible as requested
+  },
   gridLine: {
-    height: HOUR_HEIGHT,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    borderLeftWidth: 1,
-    borderLeftColor: COLORS.border,
+    borderBottomColor: COLORS.border + '20',
+    borderLeftWidth: 0, // Make vertical lines invisible
   },
   scheduleBlock: {
     position: 'absolute',
     borderRadius: 4,
-    padding: 2,
     zIndex: 10,
+    marginHorizontal: 1, // Small margin for cleaner look
+  },
+  scheduleInner: {
+    flex: 1,
+    borderRadius: 3,
+    padding: 2,
     borderWidth: 0.5,
     borderColor: 'rgba(0,0,0,0.1)',
   },
