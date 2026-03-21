@@ -28,13 +28,18 @@ const polarToCartesian = (centerX: number, centerY: number, radius: number, angl
 };
 
 const describeArc = (x: number, y: number, radius: number, startAngle: number, endAngle: number) => {
-  const start = polarToCartesian(x, y, radius, endAngle);
-  const end = polarToCartesian(x, y, radius, startAngle);
-  const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
+  let diff = endAngle - startAngle;
+  if (diff < 0) diff += 360;
+  
+  const start = polarToCartesian(x, y, radius, startAngle);
+  const end = polarToCartesian(x, y, radius, endAngle);
+  
+  const largeArcFlag = diff > 180 ? '1' : '0';
+  
   const d = [
-    'M', start.x, start.y,
-    'A', radius, radius, 0, largeArcFlag, 0, end.x, end.y,
-    'L', x, y,
+    'M', x, y,
+    'L', start.x, start.y,
+    'A', radius, radius, 0, largeArcFlag, 1, end.x, end.y,
     'Z',
   ].join(' ');
   return d;
@@ -90,6 +95,22 @@ export const CircularClock: React.FC<CircularClockProps> = ({ data = [] }) => {
           {data.map((item, index) => {
             const startAngle = hourToAngle(item.startHour);
             const endAngle = hourToAngle(item.endHour);
+            const diff = (item.endHour - item.startHour + 24) % 24;
+
+            // If it's a 24-hour event, render a Circle
+            if (diff >= 23.99) {
+              return (
+                <Circle
+                  key={index}
+                  cx={CENTER}
+                  cy={CENTER}
+                  r={RADIUS - 5}
+                  fill={item.color}
+                  opacity={0.7}
+                />
+              );
+            }
+
             return (
               <Path
                 key={index}
