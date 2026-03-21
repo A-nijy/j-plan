@@ -36,8 +36,14 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
     const top = (startH - start_hour) * HOUR_HEIGHT + (startM / 60) * HOUR_HEIGHT;
     const height = (endH - startH) * HOUR_HEIGHT + ((endM - startM) / 60) * HOUR_HEIGHT;
     
-    // Monday = 0, Tuesday = 1, ..., Sunday = 6
-    const dayIndex = (schedule.day_of_week + 6) % 7; 
+    // Calculate dayIndex: prefer day_of_week, fallback to target_date
+    let dayIndex = 0;
+    if (schedule.day_of_week !== null && schedule.day_of_week !== undefined) {
+      dayIndex = (schedule.day_of_week + 6) % 7;
+    } else if (schedule.target_date) {
+      dayIndex = (new Date(schedule.target_date).getDay() + 6) % 7;
+    }
+
     const left = dayIndex * COLUMN_WIDTH;
  
     return {

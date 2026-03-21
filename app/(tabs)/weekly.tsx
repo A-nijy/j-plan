@@ -91,6 +91,7 @@ export default function WeeklyScreen() {
                 ]}
                 onPress={() => {
                   setCurrentWeekStart(startOfWeek(date, { weekStartsOn: 1 }));
+                  setSelectedDay(date.getDay());
                 }}
               >
                 <Text style={[
@@ -111,9 +112,15 @@ export default function WeeklyScreen() {
 
   const handleAddSchedule = async (newSchedule: any) => {
     try {
+      // Calculate the specific date for the selected day in the current week
+      // (selectedDay: 0=Sun, 1=Mon...)
+      // Offset from Monday: (1+6)%7=0, (0+6)%7=6
+      const dayOffset = (selectedDay + 6) % 7;
+      const targetDate = format(addDays(currentWeekStart, dayOffset), 'yyyy-MM-dd');
+
       await ScheduleService.createSchedule({
         ...newSchedule,
-        day_of_week: selectedDay,
+        target_date: targetDate,
       });
       setModalVisible(false);
       loadWeeklySchedules();

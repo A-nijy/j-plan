@@ -32,13 +32,14 @@ export class ScheduleService {
     const db = await this.getDb();
     const dayOfWeek = new Date(date).getDay();
     
-    // Get recurring schedules for the day of week OR specific schedules for the date
+    // Get recurring schedules (where target_date is NULL and day_of_week matches)
+    // OR specific schedules for this specific date
     const result = await db.getAllAsync<Schedule>(
       `SELECT * FROM schedules 
        WHERE is_deleted = 0 
-       AND (day_of_week = ? OR target_date = ?)
+       AND ((target_date = ?) OR (target_date IS NULL AND day_of_week = ?))
        ORDER BY start_time ASC`,
-      [dayOfWeek, date]
+      [date, dayOfWeek]
     );
     return result;
   }

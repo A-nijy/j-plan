@@ -31,7 +31,6 @@ export default function TodayScreen() {
       await ScheduleService.createSchedule({
         ...newSchedule,
         target_date: today,
-        day_of_week: new Date().getDay(),
       });
       setModalVisible(false);
       loadSchedules();
