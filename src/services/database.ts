@@ -54,6 +54,24 @@ export const initDatabase = async () => {
       );
     `);
 
+    // Weekly Settings Table
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS weekly_settings (
+        id TEXT PRIMARY KEY NOT NULL,
+        view_mode TEXT DEFAULT 'combined',
+        grid_interval INTEGER DEFAULT 60,
+        start_hour INTEGER DEFAULT 0,
+        end_hour INTEGER DEFAULT 23,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Initialize default settings if not exists
+    const existingSettings = await db.getFirstAsync('SELECT id FROM weekly_settings WHERE id = "default"');
+    if (!existingSettings) {
+      await db.runAsync('INSERT INTO weekly_settings (id, view_mode, grid_interval, start_hour, end_hour) VALUES ("default", "combined", 60, 0, 23)');
+    }
+
     console.log('Database tables initialized');
     return db;
   } catch (error) {

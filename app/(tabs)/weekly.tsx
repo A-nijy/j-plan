@@ -4,21 +4,31 @@ import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { WeeklyGrid } from '../../src/components/WeeklyGrid';
 import { ScheduleService } from '../../src/services/ScheduleService';
 import { Schedule } from '../../src/types';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Settings } from 'lucide-react-native';
 import { startOfWeek, format, addDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import AddScheduleModal from '../../src/components/AddScheduleModal';
+import { WeeklySettingsService, WeeklySettings } from '../../src/services/WeeklySettingsService';
+import { WeeklySettingsModal } from '../../src/components/WeeklySettingsModal';
 
 export default function WeeklyScreen() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [settings, setSettings] = useState<WeeklySettings | null>(null);
   const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const today = new Date();
   
   useEffect(() => {
+    loadSettings();
     loadWeeklySchedules();
   }, [currentWeekStart]);
+
+  const loadSettings = async () => {
+    const data = await WeeklySettingsService.getSettings();
+    setSettings(data);
+  };
 
   const loadWeeklySchedules = async () => {
     try {
@@ -43,6 +53,8 @@ export default function WeeklyScreen() {
   };
 
   const renderMonthlyCalendar = () => {
+    if (settings?.view_mode !== 'combined') return null;
+
     const monthStart = startOfMonth(currentWeekStart);
     const monthEnd = endOfMonth(monthStart);
     const startDate = startOfWeek(monthStart, { weekStartsOn: 0 }); // Sunday start for monthly grid
@@ -129,7 +141,12 @@ export default function WeeklyScreen() {
       <View style={styles.calendarNav}>
         <View>
           <Text style={styles.yearText}>{format(currentWeekStart, 'yyyy년')}</Text>
-          <Text style={styles.monthText}>{format(currentWeekStart, 'MMMM', { locale: ko })}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={styles.monthText}>{format(currentWeekStart, 'MMMM', { locale: ko })}</Text>
+            <TouchableOpacity onPress={() => setSettingsVisible(true)}>
+              <Settings color={COLORS.textSecondary} size={18} />
+            </TouchableOpacity>
+          </View>
         </View>
         <View style={styles.navButtons}>
           <TouchableOpacity style={styles.navBtn} onPress={() => moveWeek(-1)}>
@@ -146,11 +163,14 @@ export default function WeeklyScreen() {
 
       {renderMonthlyCalendar()}
 
-      <WeeklyGrid 
-        schedules={schedules} 
-        onPressSchedule={(s) => handleDeleteSchedule(s.id)}
-        startDate={currentWeekStart}
-      />
+      {settings && (
+        <WeeklyGrid 
+          schedules={schedules} 
+          onPressSchedule={(s) => handleDeleteSchedule(s.id)}
+          startDate={currentWeekStart}
+          settings={settings}
+        />
+      )}
       
       <TouchableOpacity 
         style={styles.fab}
@@ -167,6 +187,15 @@ export default function WeeklyScreen() {
         onClose={() => setModalVisible(false)}
         onSave={handleAddSchedule}
       />
+
+      {settings && (
+        <WeeklySettingsModal
+          visible={settingsVisible}
+          onClose={() => setSettingsVisible(false)}
+          settings={settings}
+          onSave={loadSettings}
+        />
+      )}
     </View>
   );
 }
