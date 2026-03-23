@@ -76,17 +76,18 @@ export default function TodayScreen() {
     ]);
   };
 
+  function timeToFloat(timeStr: string, isEnd: boolean = false) {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    if (isEnd && hours === 0 && minutes === 0) return 24.0;
+    return hours + minutes / 60;
+  }
+
   const chartData = schedules.map(s => ({
     startHour: timeToFloat(s.start_time),
-    endHour: timeToFloat(s.end_time),
+    endHour: timeToFloat(s.end_time, true),
     color: s.color,
     label: s.title,
   }));
-
-  function timeToFloat(timeStr: string) {
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    return hours + minutes / 60;
-  }
 
   return (
     <View style={styles.container}>

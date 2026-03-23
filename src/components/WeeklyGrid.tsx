@@ -28,7 +28,12 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
  
   const getScheduleStyle = (schedule: Schedule) => {
     const [startH, startM] = schedule.start_time.split(':').map(Number);
-    const [endH, endM] = schedule.end_time.split(':').map(Number);
+    let [endH, endM] = schedule.end_time.split(':').map(Number);
+    
+    // Normalize end time: 00:00 -> 24:00 if it's at the end of the day
+    if (endH === 0 && endM === 0 && startH > 0) {
+      endH = 24;
+    }
     
     const top = (startH - start_hour) * HOUR_HEIGHT + (startM / 60) * HOUR_HEIGHT;
     const height = (endH - startH) * HOUR_HEIGHT + ((endM - startM) / 60) * HOUR_HEIGHT;

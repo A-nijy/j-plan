@@ -68,25 +68,37 @@ export class ScheduleService {
     return merged;
   }
 
+  private static timeToMinutes(timeStr: string, isEnd: boolean = false): number {
+    const [h, m] = timeStr.split(':').map(Number);
+    let minutes = h * 60 + m;
+    if (isEnd && minutes === 0) return 24 * 60; // 00:00 as end time is 1440 min
+    return minutes;
+  }
+
   static async checkOverlap(date: string, startTime: string, endTime: string, currentId?: string) {
     const db = await this.getDb();
     
+    // Normalize input times to minutes
+    const startMin = this.timeToMinutes(startTime);
+    const endMin = this.timeToMinutes(endTime, true);
+    
     // 1. Check regular schedules
-    // Two intervals [s1, e1] and [s2, e2] overlap if s1 < e2 AND e1 > s2
-    const overlappingSchedules = await db.getAllAsync<Schedule>(
-      `SELECT * FROM schedules 
-       WHERE is_deleted = 0 
-       AND target_date = ? 
-       AND start_time < ? 
-       AND end_time > ?
-       ${currentId ? 'AND id != ?' : ''}`,
-      currentId ? [date, endTime, startTime, currentId] : [date, endTime, startTime]
+    const schedules = await db.getAllAsync<Schedule>(
+      `SELECT * FROM schedules WHERE is_deleted = 0 AND target_date = ? ${currentId ? 'AND id != ?' : ''}`,
+      currentId ? [date, currentId] : [date]
     );
 
-    if (overlappingSchedules.length > 0) {
+    const conflictingSchedule = schedules.find(s => {
+      const sStart = this.timeToMinutes(s.start_time);
+      const sEnd = this.timeToMinutes(s.end_time, true);
+      // Overlap: s1 < e2 AND e1 > s2
+      return sStart < endMin && sEnd > startMin;
+    });
+
+    if (conflictingSchedule) {
       return {
         hasOverlap: true,
-        conflictingItem: overlappingSchedules[0]
+        conflictingItem: conflictingSchedule
       };
     }
 
@@ -94,9 +106,11 @@ export class ScheduleService {
     const dayOfWeek = (new Date(date).getDay());
     const routineTemplates = await RoutineService.getAppliedTemplatesForDay(dayOfWeek);
     
-    const conflictingRoutine = routineTemplates.find(t => 
-      t.start_time < endTime && t.end_time > startTime
-    );
+    const conflictingRoutine = routineTemplates.find(t => {
+      const tStart = this.timeToMinutes(t.start_time);
+      const tEnd = this.timeToMinutes(t.end_time, true);
+      return tStart < endMin && tEnd > startMin;
+    });
 
     if (conflictingRoutine) {
       return {

@@ -12,21 +12,17 @@ interface TimePickerModalProps {
   title: string;
 }
 
-const AMPMS = ['오전', '오후'];
-const HOURS_12 = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
+const HOURS_24 = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
 const MINUTES_60 = Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0'));
 
 export const TimePickerModal = ({ visible, onClose, onConfirm, initialHour24, initialMinute, title }: TimePickerModalProps) => {
-  const [ampm, setAmpm] = useState('오전');
-  const [h12, setH12] = useState('12');
+  const [hour24, setHour24] = useState('09');
   const [minute, setMinute] = useState('00');
   const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
     if (visible) {
-      const h24 = parseInt(initialHour24);
-      setAmpm(h24 >= 12 ? '오후' : '오전');
-      setH12((h24 % 12 || 12).toString());
+      setHour24(initialHour24.padStart(2, '0'));
       
       const m = parseInt(initialMinute);
       const snappedM = (Math.round(m / 5) * 5 % 60).toString().padStart(2, '0');
@@ -36,14 +32,10 @@ export const TimePickerModal = ({ visible, onClose, onConfirm, initialHour24, in
   }, [visible, initialHour24, initialMinute]);
 
   const handleConfirm = () => {
-    let finalH24 = parseInt(h12);
-    if (ampm === '오후' && finalH24 < 12) finalH24 += 12;
-    if (ampm === '오전' && finalH24 === 12) finalH24 = 0;
-    onConfirm(finalH24.toString().padStart(2, '0'), minute);
+    onConfirm(hour24, minute);
   };
 
-  const ampmIdx = Math.max(0, AMPMS.indexOf(ampm));
-  const h12Idx = Math.max(0, HOURS_12.indexOf(h12));
+  const hourIdx = Math.max(0, HOURS_24.indexOf(hour24));
   const minIdx = Math.max(0, MINUTES_60.indexOf(minute));
 
   return (
@@ -54,28 +46,17 @@ export const TimePickerModal = ({ visible, onClose, onConfirm, initialHour24, in
           <View style={styles.pickerRow}>
             <View style={{ width: 80 }}>
               <WheelPicker
-                key={`ampm-${nonce}`}
-                selectedIndex={ampmIdx}
-                options={AMPMS}
-                onChange={(index) => setAmpm(AMPMS[index])}
-                itemTextStyle={styles.wheelItemText}
-                selectedIndicatorStyle={styles.wheelIndicator}
-                itemHeight={44}
-              />
-            </View>
-            <View style={{ width: 60 }}>
-              <WheelPicker
                 key={`hour-${nonce}`}
-                selectedIndex={h12Idx}
-                options={HOURS_12}
-                onChange={(index) => setH12(HOURS_12[index])}
+                selectedIndex={hourIdx}
+                options={HOURS_24}
+                onChange={(index) => setHour24(HOURS_24[index])}
                 itemTextStyle={styles.wheelItemText}
                 selectedIndicatorStyle={styles.wheelIndicator}
                 itemHeight={44}
               />
             </View>
             <Text style={styles.separator}>:</Text>
-            <View style={{ width: 60 }}>
+            <View style={{ width: 80 }}>
               <WheelPicker
                 key={`min-${nonce}`}
                 selectedIndex={minIdx}
