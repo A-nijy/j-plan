@@ -6,6 +6,7 @@ export interface WeeklySettings {
   grid_interval: 10 | 20 | 30 | 60;
   start_hour: number;
   end_hour: number;
+  show_circular_clock: number; // 0 or 1
   updated_at: string;
 }
 
@@ -21,6 +22,7 @@ export const WeeklySettingsService = {
         grid_interval: 60,
         start_hour: 0,
         end_hour: 23,
+        show_circular_clock: 1,
         updated_at: new Date().toISOString()
       };
     }

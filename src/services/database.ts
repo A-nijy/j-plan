@@ -62,9 +62,15 @@ export const initDatabase = async () => {
         grid_interval INTEGER DEFAULT 60,
         start_hour INTEGER DEFAULT 0,
         end_hour INTEGER DEFAULT 23,
+        show_circular_clock INTEGER DEFAULT 1,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // Migration for weekly_settings
+    try {
+      await db.execAsync("ALTER TABLE weekly_settings ADD COLUMN show_circular_clock INTEGER DEFAULT 1;");
+    } catch (e) { /* Column might already exist */ }
 
     // Routine Templates Table
     await db.execAsync(`

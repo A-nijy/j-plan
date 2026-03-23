@@ -4,19 +4,34 @@ import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { CircularClock } from '../../src/components/CircularClock';
 import { ScheduleService } from '../../src/services/ScheduleService';
 import { Schedule } from '../../src/types';
-import { Plus } from 'lucide-react-native';
+import { Plus, Eye, EyeOff } from 'lucide-react-native';
 import { format } from 'date-fns';
 import AddScheduleModal from '../../src/components/AddScheduleModal';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
+import { WeeklySettings, WeeklySettingsService } from '../../src/services/WeeklySettingsService';
 
 export default function TodayScreen() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [settings, setSettings] = useState<WeeklySettings | null>(null);
   const today = format(new Date(), 'yyyy-MM-dd');
+
+  const loadSettings = async () => {
+    const data = await WeeklySettingsService.getSettings();
+    setSettings(data);
+  };
+
+  const toggleClock = async () => {
+    if (!settings) return;
+    const newShowClock = settings.show_circular_clock === 1 ? 0 : 1;
+    await WeeklySettingsService.updateSettings({ show_circular_clock: newShowClock });
+    await loadSettings();
+  };
 
   useFocusEffect(
     useCallback(() => {
+      loadSettings();
       loadSchedules();
     }, [])
   );
@@ -76,19 +91,33 @@ export default function TodayScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.clockContainer}>
-          <CircularClock data={chartData} />
-        </View>
+        {settings?.show_circular_clock === 1 && (
+          <View style={styles.clockContainer}>
+            <CircularClock data={chartData} />
+          </View>
+        )}
         
         <View style={styles.listContainer}>
           <View style={styles.headerRow}>
             <Text style={styles.sectionTitle}>오늘의 일정</Text>
-            <TouchableOpacity 
-              style={styles.addButton}
-              onPress={() => setModalVisible(true)}
-            >
-              <Plus color={COLORS.surface} size={20} />
-            </TouchableOpacity>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity 
+                style={styles.settingsButton}
+                onPress={toggleClock}
+              >
+                {settings?.show_circular_clock === 1 ? (
+                  <EyeOff color={COLORS.textSecondary} size={20} />
+                ) : (
+                  <Eye color={COLORS.textSecondary} size={20} />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.addButton}
+                onPress={() => setModalVisible(true)}
+              >
+                <Plus color={COLORS.surface} size={20} />
+              </TouchableOpacity>
+            </View>
           </View>
           
           {schedules.length === 0 ? (
@@ -104,7 +133,14 @@ export default function TodayScreen() {
               >
                 <View style={[styles.colorIndicator, { backgroundColor: item.color }]} />
                 <View style={styles.scheduleInfo}>
-                  <Text style={styles.scheduleTitle}>{item.title}</Text>
+                  <View style={styles.titleRow}>
+                    <Text style={styles.scheduleTitle}>{item.title}</Text>
+                    {item.is_routine && (
+                      <View style={styles.routineBadge}>
+                        <Text style={styles.routineBadgeText}>루틴</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.scheduleTime}>
                     {item.start_time} - {item.end_time}
                   </Text>
@@ -149,6 +185,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: COLORS.text,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  settingsButton: {
+    padding: SPACING.xs,
   },
   addButton: {
     width: 36,

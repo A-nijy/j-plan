@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, Dimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
@@ -51,6 +51,38 @@ export default function WeeklyScreen() {
     setCurrentWeekStart(prev => addDays(prev, direction * 7));
   };
 
+  const handleAddSchedule = async (newSchedule: {
+    title: string;
+    description: string;
+    start_time: string;
+    end_time: string;
+    color: string;
+    target_date: string;
+  }) => {
+    try {
+      await ScheduleService.createSchedule(newSchedule);
+      setModalVisible(false);
+      loadWeeklySchedules();
+    } catch (error) {
+      Alert.alert('오류', '일정을 저장하지 못했습니다.');
+    }
+  };
+
+  const handleDeleteSchedule = (id: string) => {
+    if (id.startsWith('routine-')) return;
+    Alert.alert('일정 삭제', '정말로 이 일정을 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      { 
+        text: '삭제', 
+        style: 'destructive',
+        onPress: async () => {
+          await ScheduleService.deleteSchedule(id);
+          loadWeeklySchedules();
+        }
+      },
+    ]);
+  };
+
   const renderMonthlyCalendar = () => {
     if (settings?.view_mode !== 'combined') return null;
 
@@ -82,7 +114,7 @@ export default function WeeklyScreen() {
                   styles.dayCell, 
                   isSelectedWeek && styles.selectedWeekCell,
                   isToday && styles.todayCell
-                 ]}
+                ]}
                 onPress={() => {
                   setCurrentWeekStart(startOfWeek(date, { weekStartsOn: 1 }));
                   setSelectedDay(date.getDay());
@@ -102,39 +134,6 @@ export default function WeeklyScreen() {
         </View>
       </View>
     );
-  };
-
-  const handleAddSchedule = async (newSchedule: {
-    title: string;
-    description: string;
-    start_time: string;
-    end_time: string;
-    color: string;
-    target_date: string;
-  }) => {
-    try {
-      await ScheduleService.createSchedule(newSchedule);
-      setModalVisible(false);
-      loadWeeklySchedules();
-    } catch (error) {
-      Alert.alert('오류', '일정을 저장하지 못했습니다.');
-    }
-  };
-
-  const handleDeleteSchedule = (id: string) => {
-    if (id.startsWith('routine-')) return; // Ignore direct deletion of routine from weekly view for now
-
-    Alert.alert('일정 삭제', '정말로 이 일정을 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      { 
-        text: '삭제', 
-        style: 'destructive',
-        onPress: async () => {
-          await ScheduleService.deleteSchedule(id);
-          loadWeeklySchedules();
-        }
-      },
-    ]);
   };
 
   return (
