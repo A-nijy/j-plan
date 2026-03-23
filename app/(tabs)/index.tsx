@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { CircularClock } from '../../src/components/CircularClock';
@@ -7,15 +7,19 @@ import { Schedule } from '../../src/types';
 import { Plus } from 'lucide-react-native';
 import { format } from 'date-fns';
 import AddScheduleModal from '../../src/components/AddScheduleModal';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
 export default function TodayScreen() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const today = format(new Date(), 'yyyy-MM-dd');
 
-  useEffect(() => {
-    loadSchedules();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadSchedules();
+    }, [])
+  );
 
   const loadSchedules = async () => {
     try {
@@ -189,10 +193,27 @@ const styles = StyleSheet.create({
   scheduleInfo: {
     flex: 1,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
   scheduleTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.text,
+  },
+  routineBadge: {
+    backgroundColor: COLORS.primary + '20',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  routineBadgeText: {
+    fontSize: 10,
+    color: COLORS.primary,
+    fontWeight: 'bold',
   },
   scheduleTime: {
     fontSize: 13,

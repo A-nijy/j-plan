@@ -9,7 +9,7 @@ import {
   isSameMonth, addMonths, isSameDay
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import WheelPicker from 'react-native-wheely';
+import { TimePickerModal } from './common/TimePickerModal';
 
 interface AddScheduleModalProps {
   visible: boolean;
@@ -41,205 +41,89 @@ const PRESET_COLORS = [
   '#E9ECEF', // Neutral Gray
 ];
 
-const AMPMS = ['오전', '오후'];
-const HOURS_12 = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
-const MINUTES_60 = Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0'));
-
-interface TimePickerModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onConfirm: (hour24: string, minute: string) => void;
-  initialHour24: string;
-  initialMinute: string;
-  title: string;
-}
-
-const TimePickerModal = ({ visible, onClose, onConfirm, initialHour24, initialMinute, title }: TimePickerModalProps) => {
-  const [ampm, setAmpm] = useState('오전');
-  const [h12, setH12] = useState('12');
-  const [minute, setMinute] = useState('00');
-  const [nonce, setNonce] = useState(0);
-
-  useEffect(() => {
-    if (visible) {
-      const h24 = parseInt(initialHour24);
-      setAmpm(h24 >= 12 ? '오후' : '오전');
-      setH12((h24 % 12 || 12).toString());
-      
-      const m = parseInt(initialMinute);
-      const snappedM = (Math.round(m / 5) * 5 % 60).toString().padStart(2, '0');
-      setMinute(snappedM);
-      setNonce(n => n + 1);
-    }
-  }, [visible, initialHour24, initialMinute]);
-
-  const handleConfirm = () => {
-    let finalH24 = parseInt(h12);
-    if (ampm === '오후' && finalH24 < 12) finalH24 += 12;
-    if (ampm === '오전' && finalH24 === 12) finalH24 = 0;
-    onConfirm(finalH24.toString().padStart(2, '0'), minute);
-  };
-
-  const ampmIdx = Math.max(0, AMPMS.indexOf(ampm));
-  const h12Idx = Math.max(0, HOURS_12.indexOf(h12));
-  const minIdx = Math.max(0, MINUTES_60.indexOf(minute));
-
-  return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.pickerOverlay}>
-        <View style={styles.pickerContent}>
-          <Text style={styles.pickerTitle}>{title}</Text>
-          <View style={styles.pickerRow}>
-            <View style={{ width: 80 }}>
-              <WheelPicker
-                key={`ampm-${nonce}`}
-                selectedIndex={ampmIdx}
-                options={AMPMS}
-                onChange={(index) => setAmpm(AMPMS[index])}
-                itemTextStyle={styles.wheelItemText}
-                selectedIndicatorStyle={styles.wheelIndicator}
-                itemHeight={44}
-              />
-            </View>
-            <View style={{ width: 60 }}>
-              <WheelPicker
-                key={`hour-${nonce}`}
-                selectedIndex={h12Idx}
-                options={HOURS_12}
-                onChange={(index) => setH12(HOURS_12[index])}
-                itemTextStyle={styles.wheelItemText}
-                selectedIndicatorStyle={styles.wheelIndicator}
-                itemHeight={44}
-              />
-            </View>
-            <Text style={styles.separator}>:</Text>
-            <View style={{ width: 60 }}>
-              <WheelPicker
-                key={`min-${nonce}`}
-                selectedIndex={minIdx}
-                options={MINUTES_60}
-                onChange={(index) => setMinute(MINUTES_60[index])}
-                itemTextStyle={styles.wheelItemText}
-                selectedIndicatorStyle={styles.wheelIndicator}
-                itemHeight={44}
-              />
-            </View>
-          </View>
-          <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelButtonText}>취소</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.confirmButtonSmall} onPress={handleConfirm}>
-              <Text style={styles.confirmButtonText}>확인</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-};
-
 interface DatePickerModalProps {
   visible: boolean;
   onClose: () => void;
-  onConfirm: (date: string) => void;
-  initialDate: string;
-  title: string;
+  onSelect: (date: Date) => void;
+  initialDate: Date;
 }
 
-const DatePickerModal = ({ visible, onClose, onConfirm, initialDate, title }: DatePickerModalProps) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date());
+const DatePickerModal = ({ visible, onClose, onSelect, initialDate }: DatePickerModalProps) => {
+  const [currentMonth, setCurrentMonth] = useState(initialDate);
+  const [selectedDate, setSelectedDate] = useState(initialDate);
 
   useEffect(() => {
-    if (visible) {
-      const d = parseISO(initialDate || format(new Date(), 'yyyy-MM-dd'));
-      setCurrentMonth(startOfMonth(d));
-      setSelectedDate(d);
-    }
-  }, [visible, initialDate]);
+    setSelectedDate(initialDate);
+    setCurrentMonth(initialDate);
+  }, [initialDate, visible]);
 
-  const renderHeader = () => (
-    <View style={styles.calendarNav}>
-      <TouchableOpacity style={styles.navBtn} onPress={() => setCurrentMonth(addMonths(currentMonth, -1))}>
-        <ChevronLeft size={24} color={COLORS.text} />
-      </TouchableOpacity>
-      <Text style={styles.calendarMonthText}>
-        {format(currentMonth, 'yyyy년 M월', { locale: ko })}
-      </Text>
-      <TouchableOpacity style={styles.navBtn} onPress={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-        <ChevronRight size={24} color={COLORS.text} />
-      </TouchableOpacity>
-    </View>
-  );
+  const days = eachDayOfInterval({
+    start: startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 0 }),
+    end: endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 0 }),
+  });
 
-  const renderDays = () => {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(monthStart);
-    const startDate = startOfWeek(monthStart, { weekStartsOn: 0 });
-    const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 });
+  const handlePrevMonth = () => setCurrentMonth(addMonths(currentMonth, -1));
+  const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
-    const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
-    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-
-    return (
-      <View style={styles.calendarGrid}>
-        <View style={styles.weekdayRow}>
-          {weekdays.map((day, i) => (
-            <Text key={day} style={[styles.weekdayText, i === 0 && { color: '#FFADAD' }, i === 6 && { color: '#A0C4FF' }]}>
-              {day}
-            </Text>
-          ))}
-        </View>
-        <View style={styles.daysGrid}>
-          {calendarDays.map((date, i) => {
-            const isCurrentMonth = isSameMonth(date, monthStart);
-            const isSelected = isSameDay(date, selectedDate);
-            const isSun = date.getDay() === 0;
-            const isSat = date.getDay() === 6;
-
-            return (
-              <TouchableOpacity
-                key={i}
-                style={[
-                  styles.dayCell,
-                  isSelected && styles.selectedDayCell,
-                ]}
-                onPress={() => setSelectedDate(date)}
-              >
-                <Text style={[
-                  styles.dayText,
-                  !isCurrentMonth && styles.otherMonthText,
-                  isSelected && styles.selectedDayText,
-                  !isSelected && isSun && { color: '#FFADAD' },
-                  !isSelected && isSat && { color: '#A0C4FF' },
-                ]}>
-                  {format(date, 'd')}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-    );
-  };
+  const weekDayLabels = ['일', '월', '화', '수', '목', '금', '토'];
 
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.pickerOverlay}>
         <View style={styles.calendarContent}>
-          <Text style={styles.pickerTitle}>{title}</Text>
-          {renderHeader()}
-          {renderDays()}
+          <View style={styles.calendarHeader}>
+            <TouchableOpacity onPress={handlePrevMonth} style={styles.navBtn}>
+              <ChevronLeft size={24} color={COLORS.text} />
+            </TouchableOpacity>
+            <Text style={styles.calendarMonthText}>
+              {format(currentMonth, 'yyyy년 M월', { locale: ko })}
+            </Text>
+            <TouchableOpacity onPress={handleNextMonth} style={styles.navBtn}>
+              <ChevronRight size={24} color={COLORS.text} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.calendarGrid}>
+            <View style={styles.weekdayRow}>
+              {weekDayLabels.map(label => (
+                <Text key={label} style={styles.weekdayText}>{label}</Text>
+              ))}
+            </View>
+            <View style={styles.daysGrid}>
+              {days.map((day, idx) => {
+                const isSelected = isSameDay(day, selectedDate);
+                const isCurrentMonth = isSameMonth(day, currentMonth);
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[styles.dayCell, isSelected && styles.selectedDayCell]}
+                    onPress={() => setSelectedDate(day)}
+                  >
+                    <Text style={[
+                      styles.dayText, 
+                      isSelected && styles.selectedDayText,
+                      !isCurrentMonth && styles.otherMonthText
+                    ]}>
+                      {format(day, 'd')}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
           <View style={styles.buttonRow}>
             <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
               <Text style={styles.cancelButtonText}>취소</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.confirmButtonSmall} 
-              onPress={() => onConfirm(format(selectedDate, 'yyyy-MM-dd'))}
+              onPress={() => {
+                onSelect(selectedDate);
+                onClose();
+              }}
             >
-              <Text style={styles.confirmButtonText}>확인</Text>
+              <Text style={styles.confirmButtonText}>선택</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -248,13 +132,7 @@ const DatePickerModal = ({ visible, onClose, onConfirm, initialDate, title }: Da
   );
 };
 
-export default function AddScheduleModal({ 
-  visible, 
-  onClose, 
-  onSave, 
-  initialDate = format(new Date(), 'yyyy-MM-dd'),
-  showDatePicker = false
-}: AddScheduleModalProps) {
+export default function AddScheduleModal({ visible, onClose, onSave, initialDate, showDatePicker = true }: AddScheduleModalProps) {
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -263,19 +141,30 @@ export default function AddScheduleModal({
   const [endHour, setEndHour] = useState('10');
   const [endMin, setEndMin] = useState('00');
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
-  const [selectedDate, setSelectedDate] = useState(initialDate);
+  const [selectedDate, setSelectedDate] = useState(new Date());
   
   const [showPicker, setShowPicker] = useState<'start' | 'end' | 'date' | null>(null);
 
   useEffect(() => {
     if (visible) {
-      setSelectedDate(initialDate);
+      setTitle('');
+      setDescription('');
+      setStartHour('09');
+      setStartMin('00');
+      setEndHour('10');
+      setEndMin('00');
+      setSelectedColor(PRESET_COLORS[0]);
+      if (initialDate) {
+        setSelectedDate(parseISO(initialDate));
+      } else {
+        setSelectedDate(new Date());
+      }
     }
   }, [visible, initialDate]);
 
   const handleSave = () => {
     if (!title.trim()) {
-      Alert.alert('알림', '일정을 입력해 주세요.');
+      Alert.alert('알림', '일정을 입력해주세요.');
       return;
     }
     onSave({
@@ -284,20 +173,8 @@ export default function AddScheduleModal({
       start_time: `${startHour}:${startMin}`,
       end_time: `${endHour}:${endMin}`,
       color: selectedColor,
-      target_date: selectedDate,
+      target_date: format(selectedDate, 'yyyy-MM-dd'),
     });
-    resetAndClose();
-  };
-
-  const resetAndClose = () => {
-    setTitle('');
-    setDescription('');
-    setStartHour('09');
-    setStartMin('00');
-    setEndHour('10');
-    setEndMin('00');
-    setSelectedColor(PRESET_COLORS[0]);
-    onClose();
   };
 
   const onConfirmTimePicker = (h: string, m: string) => {
@@ -311,17 +188,12 @@ export default function AddScheduleModal({
     setShowPicker(null);
   };
 
-  const onConfirmDatePicker = (date: string) => {
-    setSelectedDate(date);
-    setShowPicker(null);
-  };
-
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.modalOverlay}>
         <View style={[styles.modalContent, { paddingBottom: insets.bottom + SPACING.lg }]}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>일정 추가</Text>
+            <Text style={styles.headerTitle}>새 일정 추가</Text>
             <TouchableOpacity onPress={onClose}>
               <X color={COLORS.text} size={24} />
             </TouchableOpacity>
@@ -340,88 +212,89 @@ export default function AddScheduleModal({
               <>
                 <Text style={styles.label}>날짜</Text>
                 <TouchableOpacity 
-                  style={styles.timeInput}
+                  style={styles.dateInput}
                   onPress={() => setShowPicker('date')}
                 >
-                  <Calendar size={16} color={COLORS.textSecondary} />
-                  <Text style={styles.timeText}>
-                    {format(parseISO(selectedDate), 'yyyy년 MM월 dd일 (EEEE)', { locale: ko })}
+                  <Calendar size={18} color={COLORS.textSecondary} />
+                  <Text style={styles.dateText}>
+                    {format(selectedDate, 'yyyy년 M월 d일 (E)', { locale: ko })}
                   </Text>
                 </TouchableOpacity>
               </>
             )}
 
             <View style={styles.row}>
-              <TouchableOpacity 
-                style={styles.flex1} 
-                onPress={() => setShowPicker('start')}
-              >
+              <View style={styles.flex1}>
                 <Text style={styles.label}>시작 시간</Text>
-                <View style={styles.timeInput}>
+                <TouchableOpacity 
+                  style={styles.timeInput}
+                  onPress={() => setShowPicker('start')}
+                >
                   <Clock size={16} color={COLORS.textSecondary} />
                   <Text style={styles.timeText}>{startHour}:{startMin}</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={[styles.flex1, { marginLeft: SPACING.md }]} 
-                onPress={() => setShowPicker('end')}
-              >
+                </TouchableOpacity>
+              </View>
+              <View style={{ width: SPACING.md }} />
+              <View style={styles.flex1}>
                 <Text style={styles.label}>종료 시간</Text>
-                <View style={styles.timeInput}>
+                <TouchableOpacity 
+                  style={styles.timeInput}
+                  onPress={() => setShowPicker('end')}
+                >
                   <Clock size={16} color={COLORS.textSecondary} />
                   <Text style={styles.timeText}>{endHour}:{endMin}</Text>
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
+              </View>
             </View>
 
-            <Text style={styles.label}>색상 선택</Text>
-            <View style={styles.colorPicker}>
+            <Text style={styles.label}>색상</Text>
+            <View style={styles.colorContainer}>
               {PRESET_COLORS.map((color) => (
                 <TouchableOpacity
                   key={color}
                   style={[
-                    styles.colorOption,
+                    styles.colorCircle,
                     { backgroundColor: color },
-                    selectedColor === color && styles.selectedColorOption,
+                    selectedColor === color && styles.selectedColorCircle
                   ]}
                   onPress={() => setSelectedColor(color)}
-                />
+                >
+                  {selectedColor === color && <Check size={16} color="#000" />}
+                </TouchableOpacity>
               ))}
             </View>
 
             <Text style={styles.label}>설명 (선택)</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="상세 정보를 입력하세요"
-              multiline
-              numberOfLines={3}
+              placeholder="일정에 대한 추가 메모를 입력하세요"
               value={description}
               onChangeText={setDescription}
+              multiline
+              numberOfLines={3}
             />
           </ScrollView>
 
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>저장하기</Text>
+            <Text style={styles.saveButtonText}>일정 저장</Text>
           </TouchableOpacity>
         </View>
       </View>
+      
+      <DatePickerModal
+        visible={showPicker === 'date'}
+        onClose={() => setShowPicker(null)}
+        onSelect={setSelectedDate}
+        initialDate={selectedDate}
+      />
 
-      <TimePickerModal 
+      <TimePickerModal
         visible={showPicker === 'start' || showPicker === 'end'}
         onClose={() => setShowPicker(null)}
         onConfirm={onConfirmTimePicker}
         initialHour24={showPicker === 'start' ? startHour : endHour}
         initialMinute={showPicker === 'start' ? startMin : endMin}
-        title={showPicker === 'start' ? '시작 시간 선택' : '종료 시간 선택'}
-      />
-
-      <DatePickerModal
-        visible={showPicker === 'date'}
-        onClose={() => setShowPicker(null)}
-        onConfirm={onConfirmDatePicker}
-        initialDate={selectedDate}
-        title="날짜 선택"
+        title={showPicker === 'start' ? '시작 시간 설정' : '종료 시간 설정'}
       />
     </Modal>
   );
@@ -434,54 +307,59 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: COLORS.surface,
-    borderTopLeftRadius: BORDER_RADIUS.lg,
-    borderTopRightRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    maxHeight: '85%',
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: BORDER_RADIUS.xl,
+    borderTopRightRadius: BORDER_RADIUS.xl,
+    padding: SPACING.xl,
+    maxHeight: '90%',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.xl,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: COLORS.text,
-    flex: 1,
   },
   form: {
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.xl,
   },
   label: {
     fontSize: 14,
+    fontWeight: '600',
     color: COLORS.textSecondary,
     marginBottom: SPACING.xs,
     marginTop: SPACING.md,
   },
   input: {
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
-    fontSize: 16,
     color: COLORS.text,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  timeInput: {
+  dateInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
-    gap: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.sm,
   },
-  timeText: {
+  dateText: {
+    marginLeft: SPACING.sm,
     fontSize: 16,
     color: COLORS.text,
   },
   textArea: {
-    height: 100,
+    height: 80,
     textAlignVertical: 'top',
   },
   row: {
@@ -490,60 +368,62 @@ const styles = StyleSheet.create({
   flex1: {
     flex: 1,
   },
-  colorPicker: {
+  timeInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  timeText: {
+    marginLeft: SPACING.sm,
+    fontSize: 16,
+    color: COLORS.text,
+  },
+  colorContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.sm,
-    marginTop: SPACING.xs,
+    marginTop: SPACING.sm,
   },
-  colorOption: {
+  colorCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    marginRight: 10,
+    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  selectedColorOption: {
-    borderColor: COLORS.primary,
+  selectedColorCircle: {
+    borderWidth: 2,
+    borderColor: COLORS.text,
   },
   saveButton: {
     backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
+    padding: SPACING.lg,
     alignItems: 'center',
   },
   saveButtonText: {
-    color: COLORS.surface,
-    fontSize: 16,
+    color: 'white',
+    fontSize: 18,
     fontWeight: 'bold',
   },
   pickerOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pickerContent: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    width: '85%',
     alignItems: 'center',
   },
   calendarContent: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
+    padding: SPACING.xl,
     width: '90%',
   },
-  pickerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: SPACING.lg,
-    textAlign: 'center',
-  },
-  calendarNav: {
+  calendarHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -597,28 +477,6 @@ const styles = StyleSheet.create({
   },
   otherMonthText: {
     color: COLORS.border,
-  },
-  pickerRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-    paddingHorizontal: SPACING.md,
-  },
-  wheelItemText: {
-    fontSize: 20,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-  wheelIndicator: {
-    backgroundColor: COLORS.primary + '15',
-    borderRadius: BORDER_RADIUS.md,
-  },
-  separator: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginHorizontal: SPACING.xs,
   },
   buttonRow: {
     flexDirection: 'row',

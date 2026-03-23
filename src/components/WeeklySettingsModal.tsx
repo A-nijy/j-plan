@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { WeeklySettings, WeeklySettingsService } from '../services/WeeklySettingsService';
-import { X } from 'lucide-react-native';
+import { X, Clock } from 'lucide-react-native';
+import { TimePickerModal } from './common/TimePickerModal';
 
 interface WeeklySettingsModalProps {
   visible: boolean;
@@ -23,10 +24,9 @@ const VIEW_MODES = [
   { label: '시간표만 크게 보기', value: 'expanded' },
 ];
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
-
 export const WeeklySettingsModal: React.FC<WeeklySettingsModalProps> = ({ visible, onClose, settings, onSave }) => {
   const [localSettings, setLocalSettings] = useState<WeeklySettings>(settings);
+  const [showPicker, setShowPicker] = useState<'start' | 'end' | null>(null);
 
   const handleUpdate = (updates: Partial<WeeklySettings>) => {
     setLocalSettings(prev => ({ ...prev, ...updates }));
@@ -36,6 +36,16 @@ export const WeeklySettingsModal: React.FC<WeeklySettingsModalProps> = ({ visibl
     await WeeklySettingsService.updateSettings(localSettings);
     onSave();
     onClose();
+  };
+
+  const onConfirmHours = (h: string, m: string) => {
+    const hour = parseInt(h);
+    if (showPicker === 'start') {
+      handleUpdate({ start_hour: hour });
+    } else {
+      handleUpdate({ end_hour: hour });
+    }
+    setShowPicker(null);
   };
 
   return (
@@ -102,38 +112,26 @@ export const WeeklySettingsModal: React.FC<WeeklySettingsModalProps> = ({ visibl
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>표시 시간 범위</Text>
               <View style={styles.rangeRow}>
-                <View style={styles.pickerCol}>
+                <View style={styles.flex1}>
                   <Text style={styles.label}>시작 시간</Text>
-                  <ScrollView style={styles.hourList} nestedScrollEnabled>
-                    {HOURS.map(h => (
-                      <TouchableOpacity
-                        key={h}
-                        style={[styles.hourItem, localSettings.start_hour === h && styles.activeHour]}
-                        onPress={() => handleUpdate({ start_hour: h })}
-                      >
-                        <Text style={[styles.hourText, localSettings.start_hour === h && styles.activeHourText]}>
-                          {h}:00
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+                  <TouchableOpacity 
+                    style={styles.timeInput}
+                    onPress={() => setShowPicker('start')}
+                  >
+                    <Clock size={16} color={COLORS.textSecondary} />
+                    <Text style={styles.timeText}>{localSettings.start_hour.toString().padStart(2, '0')}:00</Text>
+                  </TouchableOpacity>
                 </View>
-
-                <View style={styles.pickerCol}>
+                <View style={{ width: SPACING.md }} />
+                <View style={styles.flex1}>
                   <Text style={styles.label}>종료 시간</Text>
-                  <ScrollView style={styles.hourList} nestedScrollEnabled>
-                    {HOURS.map(h => (
-                      <TouchableOpacity
-                        key={h}
-                        style={[styles.hourItem, localSettings.end_hour === h && styles.activeHour]}
-                        onPress={() => handleUpdate({ end_hour: h })}
-                      >
-                        <Text style={[styles.hourText, localSettings.end_hour === h && styles.activeHourText]}>
-                          {h}:00
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+                  <TouchableOpacity 
+                    style={styles.timeInput}
+                    onPress={() => setShowPicker('end')}
+                  >
+                    <Clock size={16} color={COLORS.textSecondary} />
+                    <Text style={styles.timeText}>{localSettings.end_hour.toString().padStart(2, '0')}:00</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
               {localSettings.start_hour >= localSettings.end_hour && (
@@ -154,6 +152,15 @@ export const WeeklySettingsModal: React.FC<WeeklySettingsModalProps> = ({ visibl
           </TouchableOpacity>
         </View>
       </View>
+
+      <TimePickerModal
+        visible={showPicker !== null}
+        onClose={() => setShowPicker(null)}
+        onConfirm={onConfirmHours}
+        initialHour24={(showPicker === 'start' ? localSettings.start_hour : localSettings.end_hour).toString().padStart(2, '0')}
+        initialMinute="00"
+        title={showPicker === 'start' ? '시작 시간 설정' : '종료 시간 설정'}
+      />
     </Modal>
   );
 };
@@ -231,10 +238,8 @@ const styles = StyleSheet.create({
   },
   rangeRow: {
     flexDirection: 'row',
-    gap: SPACING.lg,
-    height: 150,
   },
-  pickerCol: {
+  flex1: {
     flex: 1,
   },
   label: {
@@ -242,26 +247,19 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginBottom: SPACING.xs,
   },
-  hourList: {
+  timeInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  hourItem: {
-    padding: SPACING.sm,
-    alignItems: 'center',
-  },
-  activeHour: {
-    backgroundColor: COLORS.primary + '15',
-  },
-  hourText: {
+  timeText: {
+    marginLeft: SPACING.sm,
     fontSize: 14,
     color: COLORS.text,
-  },
-  activeHourText: {
-    color: COLORS.primary,
-    fontWeight: 'bold',
   },
   saveButton: {
     backgroundColor: COLORS.primary,

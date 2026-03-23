@@ -66,6 +66,34 @@ export const initDatabase = async () => {
       );
     `);
 
+    // Routine Templates Table
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS routine_templates (
+        id TEXT PRIMARY KEY NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        start_time TEXT NOT NULL,
+        end_time TEXT NOT NULL,
+        color TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Migration for routine_templates
+    try {
+      await db.execAsync("ALTER TABLE routine_templates ADD COLUMN updated_at TEXT DEFAULT CURRENT_TIMESTAMP;");
+    } catch (e) { /* Column might already exist */ }
+
+    // Routine Configs Table (Day of Week assignments)
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS routine_configs (
+        id TEXT PRIMARY KEY NOT NULL,
+        template_id TEXT NOT NULL,
+        day_of_week INTEGER NOT NULL
+      );
+    `);
+
     // Initialize default settings if not exists
     const existingSettings = await db.getFirstAsync('SELECT id FROM weekly_settings WHERE id = "default"');
     if (!existingSettings) {

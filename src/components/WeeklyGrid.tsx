@@ -126,11 +126,19 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
               return (
                 <TouchableOpacity
                   key={s.id}
-                  style={[styles.scheduleBlock, { top: style.top, height: style.height, left: style.left as any, width: style.width as any }]}
+                  style={[
+                    styles.scheduleBlock, 
+                    { top: style.top, height: style.height, left: style.left as any, width: style.width as any },
+                    s.is_routine && { zIndex: 5, opacity: 0.7 }
+                  ]}
                   onPress={() => onPressSchedule?.(s)}
                 >
-                  <View style={[styles.scheduleInner, { backgroundColor: style.backgroundColor }]}>
-                    <Text style={styles.scheduleTitle} numberOfLines={2}>
+                  <View style={[
+                    styles.scheduleInner, 
+                    { backgroundColor: style.backgroundColor },
+                    s.is_routine && { borderStyle: 'dashed', borderWidth: 1 }
+                  ]}>
+                    <Text style={[styles.scheduleTitle, s.is_routine && { color: COLORS.text }]} numberOfLines={2}>
                       {s.title}
                     </Text>
                   </View>

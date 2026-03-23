@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../src/constants/theme';
-import { Clock, Calendar, CheckSquare, Settings } from 'lucide-react-native';
+import { Clock, Calendar, CheckSquare, Settings, Repeat } from 'lucide-react-native';
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
@@ -40,6 +40,14 @@ export default function TabsLayout() {
           title: '주간',
           headerTitle: '주간 시간표',
           tabBarIcon: ({ color, size }) => <Calendar color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="routine"
+        options={{
+          title: '루틴',
+          headerTitle: '루틴 관리',
+          tabBarIcon: ({ color, size }) => <Repeat color={color} size={size} />,
         }}
       />
       <Tabs.Screen

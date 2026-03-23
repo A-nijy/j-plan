@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert, FlatList, Dimensions } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Dimensions } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { WeeklyGrid } from '../../src/components/WeeklyGrid';
 import { ScheduleService } from '../../src/services/ScheduleService';
@@ -20,17 +21,12 @@ export default function WeeklyScreen() {
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const today = new Date();
   
-  useEffect(() => {
-    loadSettings();
-    loadWeeklySchedules();
-  }, [currentWeekStart]);
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     const data = await WeeklySettingsService.getSettings();
     setSettings(data);
-  };
+  }, []);
 
-  const loadWeeklySchedules = async () => {
+  const loadWeeklySchedules = useCallback(async () => {
     try {
       const allSchedules: Schedule[] = [];
       for (let i = 0; i < 7; i++) {
@@ -42,27 +38,25 @@ export default function WeeklyScreen() {
     } catch (error) {
       console.error('Failed to load weekly schedules:', error);
     }
-  };
+  }, [currentWeekStart]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadSettings();
+      loadWeeklySchedules();
+    }, [loadSettings, loadWeeklySchedules])
+  );
 
   const moveWeek = (direction: number) => {
     setCurrentWeekStart(prev => addDays(prev, direction * 7));
-  };
-
-  const moveMonth = (direction: number) => {
-    setCurrentWeekStart(prev => startOfWeek(addDays(startOfMonth(prev), direction * 31), { weekStartsOn: 1 }));
   };
 
   const renderMonthlyCalendar = () => {
     if (settings?.view_mode !== 'combined') return null;
 
     const monthStart = startOfMonth(currentWeekStart);
-    const monthEnd = endOfMonth(monthStart);
-    const startDate = startOfWeek(monthStart, { weekStartsOn: 0 }); // Sunday start for monthly grid
-    const endDate = endOfMonth(monthEnd);
-    // Ensure we cover full weeks
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
-    const calendarEnd = addDays(startOfWeek(monthEnd, { weekStartsOn: 0 }), 6);
-
+    const calendarEnd = addDays(startOfWeek(endOfMonth(monthStart), { weekStartsOn: 0 }), 6);
     const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
     return (
@@ -88,7 +82,7 @@ export default function WeeklyScreen() {
                   styles.dayCell, 
                   isSelectedWeek && styles.selectedWeekCell,
                   isToday && styles.todayCell
-                ]}
+                 ]}
                 onPress={() => {
                   setCurrentWeekStart(startOfWeek(date, { weekStartsOn: 1 }));
                   setSelectedDay(date.getDay());
@@ -128,6 +122,8 @@ export default function WeeklyScreen() {
   };
 
   const handleDeleteSchedule = (id: string) => {
+    if (id.startsWith('routine-')) return; // Ignore direct deletion of routine from weekly view for now
+
     Alert.alert('일정 삭제', '정말로 이 일정을 삭제하시겠습니까?', [
       { text: '취소', style: 'cancel' },
       { 

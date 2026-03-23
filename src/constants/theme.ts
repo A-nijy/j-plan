@@ -34,5 +34,6 @@ export const BORDER_RADIUS = {
   sm: 8,
   md: 12,
   lg: 20,
+  xl: 28,
   full: 9999,
 };
