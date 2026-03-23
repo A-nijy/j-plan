@@ -67,6 +67,19 @@ export const initDatabase = async () => {
       );
     `);
 
+    // Todo Completions Table (New)
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS todo_completions (
+        id TEXT PRIMARY KEY NOT NULL,
+        todo_id TEXT NOT NULL,
+        completed_date TEXT NOT NULL,
+        status INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(todo_id, completed_date)
+      );
+    `);
+
     // Migration for weekly_settings
     try {
       await db.execAsync("ALTER TABLE weekly_settings ADD COLUMN show_circular_clock INTEGER DEFAULT 1;");
@@ -97,6 +110,17 @@ export const initDatabase = async () => {
         id TEXT PRIMARY KEY NOT NULL,
         template_id TEXT NOT NULL,
         day_of_week INTEGER NOT NULL
+      );
+    `);
+
+    // Routine Exceptions Table (Specific dates to hide a routine)
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS routine_exceptions (
+        id TEXT PRIMARY KEY NOT NULL,
+        routine_template_id TEXT NOT NULL,
+        exception_date TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(routine_template_id, exception_date)
       );
     `);
 

@@ -3,27 +3,34 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView, FlatList, Alert }
 import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { TodoService } from '../../src/services/TodoService';
 import { Todo } from '../../src/types';
-import { CheckCircle2, Circle, Plus } from 'lucide-react-native';
-import { format } from 'date-fns';
+import { CheckCircle2, Circle, Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react-native';
+import { format, addDays, subDays } from 'date-fns';
+import { ko } from 'date-fns/locale';
 import AddTodoModal from '../../src/components/AddTodoModal';
 
 export default function TodoScreen() {
   const [tab, setTab] = useState<'habit' | 'daily'>('habit');
   const [todos, setTodos] = useState<Todo[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
   useEffect(() => {
     loadTodos();
-  }, [tab]);
+  }, [tab, dateStr]);
 
   const loadTodos = async () => {
     try {
-      const data = await TodoService.getTodos(tab, today);
+      const data = await TodoService.getTodos(tab, dateStr);
       setTodos(data);
     } catch (error) {
       console.error('Failed to load todos:', error);
     }
+  };
+
+  const moveDate = (offset: number) => {
+    setSelectedDate(prev => offset > 0 ? addDays(prev, offset) : subDays(prev, -offset));
   };
 
   const handleAddTodo = async (newTodo: any) => {
@@ -31,7 +38,7 @@ export default function TodoScreen() {
       await TodoService.createTodo({
         ...newTodo,
         is_completed: 0,
-        target_date: tab === 'daily' ? today : null,
+        target_date: tab === 'daily' ? dateStr : null,
         habit_days: tab === 'habit' ? '1,2,3,4,5,6,0' : null,
       });
       loadTodos();
@@ -42,7 +49,7 @@ export default function TodoScreen() {
 
   const handleToggle = async (id: string, currentStatus: number) => {
     try {
-      await TodoService.toggleTodo(id, currentStatus === 0);
+      await TodoService.toggleTodo(id, dateStr, currentStatus === 0);
       loadTodos();
     } catch (error) {
       console.error('Failed to toggle todo:', error);
@@ -82,6 +89,31 @@ export default function TodoScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Date Navigation */}
+      <View style={styles.dateNav}>
+        <View style={styles.dateDisplay}>
+          <TouchableOpacity style={styles.navBtn} onPress={() => moveDate(-1)}>
+            <ChevronLeft color={COLORS.text} size={24} />
+          </TouchableOpacity>
+          <View style={styles.dateLabelContainer}>
+            <CalendarIcon size={16} color={COLORS.primary} style={{ marginRight: 6 }} />
+            <Text style={styles.dateTextMain}>
+              {format(selectedDate, 'yyyy년 M월 d일 (E)', { locale: ko })}
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.navBtn} onPress={() => moveDate(1)}>
+            <ChevronRight color={COLORS.text} size={24} />
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity 
+          style={styles.todayBtn} 
+          onPress={() => setSelectedDate(new Date())}
+        >
+          <Text style={styles.todayBtnText}>오늘</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.tabContainer}>
         <TouchableOpacity 
           style={[styles.tabButton, tab === 'habit' && styles.activeTabButton]} 
@@ -95,6 +127,27 @@ export default function TodoScreen() {
         >
           <Text style={[styles.tabText, tab === 'daily' && styles.activeTabText]}>일일 할 일</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Achievement Rate Section */}
+      <View style={styles.progressSection}>
+        <View style={styles.progressHeader}>
+          <Text style={styles.progressTitle}>오늘의 성취도</Text>
+          <Text style={styles.progressPercentage}>
+            {todos.length > 0 ? Math.round((todos.filter(t => t.is_completed === 1).length / todos.length) * 100) : 0}%
+          </Text>
+        </View>
+        <View style={styles.progressBarBg}>
+          <View 
+            style={[
+              styles.progressBarFill, 
+              { width: `${todos.length > 0 ? (todos.filter(t => t.is_completed === 1).length / todos.length) * 100 : 0}%` }
+            ]} 
+          />
+        </View>
+        <Text style={styles.progressStats}>
+          {todos.filter(t => t.is_completed === 1).length} / {todos.length} 완료됨
+        </Text>
       </View>
       
       <FlatList
@@ -133,6 +186,43 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  dateNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  dateDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: SPACING.xs,
+  },
+  dateTextMain: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  navBtn: {
+    padding: SPACING.xs,
+  },
+  todayBtn: {
+    backgroundColor: COLORS.primary + '15',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  todayBtnText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
   tabContainer: {
     flexDirection: 'row',
     padding: SPACING.md,
@@ -157,6 +247,50 @@ const styles = StyleSheet.create({
   activeTabText: {
     color: COLORS.primary,
     fontWeight: 'bold',
+  },
+  progressSection: {
+    backgroundColor: COLORS.surface,
+    margin: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: SPACING.xs,
+  },
+  progressTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  progressPercentage: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  },
+  progressBarBg: {
+    height: 8,
+    backgroundColor: COLORS.background,
+    borderRadius: 4,
+    marginBottom: SPACING.xs,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: COLORS.primary,
+    borderRadius: 4,
+  },
+  progressStats: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textAlign: 'right',
   },
   listContent: {
     padding: SPACING.md,

@@ -45,15 +45,39 @@ export class ScheduleService {
     // 2. Get routine templates for this day of week
     const routineTemplates = await RoutineService.getAppliedTemplatesForDay(dayOfWeek);
     
+    // 3. Get routine exceptions for this date
+    const exclusions = await db.getAllAsync<{ routine_template_id: string }>(
+      'SELECT routine_template_id FROM routine_exceptions WHERE exception_date = ?',
+      [date]
+    );
+    const excludedIds = new Set(exclusions.map(e => e.routine_template_id));
+
     // Convert templates to schedule-like objects
-    const routineSchedules = routineTemplates.map(t => ({
-      ...t,
-      id: `routine-${t.id}-${date}`,
-      target_date: date,
-      is_routine: true,
-      updated_at: t.created_at,
-      is_deleted: 0
-    }));
+    // NEW logic: Filter out both manual exclusions AND dynamic overlaps with individual schedules (Auto-Yield)
+    const routineSchedules = routineTemplates
+      .filter(t => !excludedIds.has(t.id))
+      .filter(t => {
+        // Dynamic overlap check with individual schedules
+        const tStartMin = this.timeToMinutes(t.start_time);
+        const tEndMin = this.timeToMinutes(t.end_time, true);
+
+        const hasOverlap = singleSchedules.some(s => {
+          const sStartMin = this.timeToMinutes(s.start_time);
+          const sEndMin = this.timeToMinutes(s.end_time, true);
+          // Overlap: s1 < e2 AND e1 > s2
+          return sStartMin < tEndMin && sEndMin > tStartMin;
+        });
+
+        return !hasOverlap; // Only keep if NO overlap with any individual schedule
+      })
+      .map(t => ({
+        ...t,
+        id: `routine-${t.id}-${date}`,
+        target_date: date,
+        is_routine: true,
+        updated_at: t.created_at,
+        is_deleted: 0
+      }));
 
     // Merge and sort: Put routines first so they render behind regular schedules
     const merged = [...singleSchedules, ...routineSchedules].sort((a, b) => {
@@ -106,11 +130,20 @@ export class ScheduleService {
     const dayOfWeek = (new Date(date).getDay());
     const routineTemplates = await RoutineService.getAppliedTemplatesForDay(dayOfWeek);
     
-    const conflictingRoutine = routineTemplates.find(t => {
-      const tStart = this.timeToMinutes(t.start_time);
-      const tEnd = this.timeToMinutes(t.end_time, true);
-      return tStart < endMin && tEnd > startMin;
-    });
+    // Check exclusions
+    const exclusions = await db.getAllAsync<{ routine_template_id: string }>(
+      'SELECT routine_template_id FROM routine_exceptions WHERE exception_date = ?',
+      [date]
+    );
+    const excludedIds = new Set(exclusions.map(e => e.routine_template_id));
+
+    const conflictingRoutine = routineTemplates
+      .filter(t => !excludedIds.has(t.id))
+      .find(t => {
+        const tStart = this.timeToMinutes(t.start_time);
+        const tEnd = this.timeToMinutes(t.end_time, true);
+        return tStart < endMin && tEnd > startMin;
+      });
 
     if (conflictingRoutine) {
       return {
@@ -126,7 +159,48 @@ export class ScheduleService {
     return { hasOverlap: false };
   }
 
-  static async deleteSchedule(id: string) {
+  static async excludeRoutineFromDate(routineTemplateId: string, date: string) {
+    const db = await this.getDb();
+    const id = Crypto.randomUUID();
+    await db.runAsync(
+      `INSERT OR IGNORE INTO routine_exceptions (id, routine_template_id, exception_date) 
+       VALUES (?, ?, ?)`,
+      [id, routineTemplateId, date]
+    );
+  }
+
+  static async checkRoutineOverlap(days: number[], startTime: string, endTime: string, excludeTemplateId?: string) {
+    const startMin = this.timeToMinutes(startTime);
+    const endMin = this.timeToMinutes(endTime, true);
+    
+    for (const day of days) {
+      const routineTemplates = await RoutineService.getAppliedTemplatesForDay(day);
+      
+      const conflictingRoutine = routineTemplates.find(t => {
+        if (excludeTemplateId && t.id === excludeTemplateId) return false;
+        
+        const tStart = this.timeToMinutes(t.start_time);
+        const tEnd = this.timeToMinutes(t.end_time, true);
+        return tStart < endMin && tEnd > startMin;
+      });
+
+      if (conflictingRoutine) {
+        const dayLabel = ['일', '월', '화', '수', '목', '금', '토'][day];
+        return {
+          hasOverlap: true,
+          conflictingItem: {
+            ...conflictingRoutine,
+            title: `[${dayLabel}요일 루틴] ${conflictingRoutine.title}`,
+            is_routine: true
+          }
+        };
+      }
+    }
+
+    return { hasOverlap: false };
+  }
+
+  static async deleteScheduleAtDate(id: string) {
     const db = await this.getDb();
     const now = new Date().toISOString();
     await db.runAsync(

@@ -15,6 +15,7 @@ import { WeeklySettingsModal } from '../../src/components/WeeklySettingsModal';
 export default function WeeklyScreen() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [initialValues, setInitialValues] = useState<any>(null);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [settings, setSettings] = useState<WeeklySettings | null>(null);
   const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
@@ -62,25 +63,61 @@ export default function WeeklyScreen() {
     try {
       await ScheduleService.createSchedule(newSchedule);
       setModalVisible(false);
+      setInitialValues(null);
       loadWeeklySchedules();
     } catch (error) {
       Alert.alert('오류', '일정을 저장하지 못했습니다.');
     }
   };
 
-  const handleDeleteSchedule = (id: string) => {
-    if (id.startsWith('routine-')) return;
-    Alert.alert('일정 삭제', '정말로 이 일정을 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      { 
-        text: '삭제', 
-        style: 'destructive',
-        onPress: async () => {
-          await ScheduleService.deleteSchedule(id);
-          loadWeeklySchedules();
+  const handlePressSchedule = (schedule: Schedule) => {
+    if (schedule.is_routine) {
+      // Routine Interaction
+      const dateStr = schedule.target_date || format(addDays(currentWeekStart, (schedule.day_of_week! + 6) % 7), 'yyyy-MM-dd');
+      
+      Alert.alert('루틴 설정', '해당 루틴을 어떻게 처리할까요?', [
+        { text: '취소', style: 'cancel' },
+        { 
+          text: '오늘만 삭제', 
+          style: 'destructive',
+          onPress: async () => {
+            const templateId = schedule.id.split('-')[1]; // routine-id-date
+            await ScheduleService.excludeRoutineFromDate(templateId, dateStr);
+            loadWeeklySchedules();
+          }
+        },
+        {
+          text: '오늘만 변경',
+          onPress: async () => {
+            const templateId = schedule.id.split('-')[1];
+            await ScheduleService.excludeRoutineFromDate(templateId, dateStr);
+            setInitialValues({
+              title: schedule.title,
+              description: schedule.description,
+              start_time: schedule.start_time,
+              end_time: schedule.end_time,
+              color: schedule.color,
+            });
+            setSelectedDay(new Date(dateStr).getDay());
+            setModalVisible(true);
+            loadWeeklySchedules();
+          }
         }
-      },
-    ]);
+      ]);
+    } else {
+      // Regular Schedule Interaction (Delete)
+      Alert.alert('일정 삭제', '정말로 이 일정을 삭제하시겠습니까?', [
+        { text: '취소', style: 'cancel' },
+        { 
+          text: '삭제', 
+          style: 'destructive',
+          onPress: async () => {
+            await ScheduleService.deleteSchedule(schedule.id);
+            loadWeeklySchedules();
+          }
+        },
+      ]);
+    }
   };
 
   const renderMonthlyCalendar = () => {
@@ -166,7 +203,7 @@ export default function WeeklyScreen() {
       {settings && (
         <WeeklyGrid 
           schedules={schedules} 
-          onPressSchedule={(s) => handleDeleteSchedule(s.id)}
+          onPressSchedule={handlePressSchedule}
           startDate={currentWeekStart}
           settings={settings}
         />
@@ -175,6 +212,7 @@ export default function WeeklyScreen() {
       <TouchableOpacity 
         style={styles.fab}
         onPress={() => {
+          setInitialValues(null);
           setSelectedDay(new Date().getDay());
           setModalVisible(true);
         }}
@@ -184,10 +222,14 @@ export default function WeeklyScreen() {
 
       <AddScheduleModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        onClose={() => {
+          setModalVisible(false);
+          setInitialValues(null);
+        }}
         onSave={handleAddSchedule}
         showDatePicker={true}
         initialDate={format(addDays(currentWeekStart, (selectedDay + 6) % 7), 'yyyy-MM-dd')}
+        initialValues={initialValues}
       />
 
       {settings && (

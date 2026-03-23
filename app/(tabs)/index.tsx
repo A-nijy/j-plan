@@ -14,6 +14,7 @@ import { WeeklySettings, WeeklySettingsService } from '../../src/services/Weekly
 export default function TodayScreen() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [initialValues, setInitialValues] = useState<any>(null);
   const [settings, setSettings] = useState<WeeklySettings | null>(null);
   const today = format(new Date(), 'yyyy-MM-dd');
 
@@ -56,24 +57,56 @@ export default function TodayScreen() {
     try {
       await ScheduleService.createSchedule(newSchedule);
       setModalVisible(false);
+      setInitialValues(null);
       loadSchedules();
     } catch (error) {
       Alert.alert('오류', '일정을 저장하지 못했습니다.');
     }
   };
 
-  const handleDeleteSchedule = (id: string) => {
-    Alert.alert('일정 삭제', '정말로 이 일정을 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      { 
-        text: '삭제', 
-        style: 'destructive',
-        onPress: async () => {
-          await ScheduleService.deleteSchedule(id);
-          loadSchedules();
+  const handlePressSchedule = (schedule: Schedule) => {
+    if (schedule.is_routine) {
+      Alert.alert('루틴 설정', '해당 루틴을 어떻게 처리할까요?', [
+        { text: '취소', style: 'cancel' },
+        { 
+          text: '오늘만 삭제', 
+          style: 'destructive',
+          onPress: async () => {
+            const templateId = schedule.id.split('-')[1];
+            await ScheduleService.excludeRoutineFromDate(templateId, today);
+            loadSchedules();
+          }
+        },
+        {
+          text: '오늘만 변경',
+          onPress: async () => {
+            const templateId = schedule.id.split('-')[1];
+            await ScheduleService.excludeRoutineFromDate(templateId, today);
+            setInitialValues({
+              title: schedule.title,
+              description: schedule.description,
+              start_time: schedule.start_time,
+              end_time: schedule.end_time,
+              color: schedule.color,
+            });
+            setModalVisible(true);
+            loadSchedules();
+          }
         }
-      },
-    ]);
+      ]);
+    } else {
+      Alert.alert('일정 삭제', '정말로 이 일정을 삭제하시겠습니까?', [
+        { text: '취소', style: 'cancel' },
+        { 
+          text: '삭제', 
+          style: 'destructive',
+          onPress: async () => {
+            await ScheduleService.deleteSchedule(schedule.id);
+            loadSchedules();
+          }
+        },
+      ]);
+    }
   };
 
   function timeToFloat(timeStr: string, isEnd: boolean = false) {
@@ -114,7 +147,10 @@ export default function TodayScreen() {
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.addButton}
-                onPress={() => setModalVisible(true)}
+                onPress={() => {
+                  setInitialValues(null);
+                  setModalVisible(true);
+                }}
               >
                 <Plus color={COLORS.surface} size={20} />
               </TouchableOpacity>
@@ -130,7 +166,7 @@ export default function TodayScreen() {
               <TouchableOpacity 
                 key={item.id} 
                 style={styles.scheduleItem}
-                onLongPress={() => handleDeleteSchedule(item.id)}
+                onPress={() => handlePressSchedule(item)}
               >
                 <View style={[styles.colorIndicator, { backgroundColor: item.color }]} />
                 <View style={styles.scheduleInfo}>
@@ -154,10 +190,14 @@ export default function TodayScreen() {
 
       <AddScheduleModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        onClose={() => {
+          setModalVisible(false);
+          setInitialValues(null);
+        }}
         onSave={handleAddSchedule}
         showDatePicker={false}
         initialDate={today}
+        initialValues={initialValues}
       />
     </View>
   );

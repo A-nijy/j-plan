@@ -21,28 +21,43 @@ export class TodoService {
     return id;
   }
 
-  static async getTodos(type: 'habit' | 'daily', date?: string) {
+  static async getTodos(type: 'habit' | 'daily', date: string) {
     const db = await this.getDb();
     
     if (type === 'habit') {
+      // Habits: Show all active habits and their completion status for the specific date
       return await db.getAllAsync<Todo>(
-        'SELECT * FROM todos WHERE type = ? AND is_deleted = 0',
-        ['habit']
+        `SELECT t.*, COALESCE(tc.status, 0) as is_completed 
+         FROM todos t 
+         LEFT JOIN todo_completions tc ON t.id = tc.todo_id AND tc.completed_date = ?
+         WHERE t.type = 'habit' AND t.is_deleted = 0`,
+        [date]
       );
     } else {
+      // Daily: Show items for the specific date and their completion status
       return await db.getAllAsync<Todo>(
-        'SELECT * FROM todos WHERE type = ? AND target_date = ? AND is_deleted = 0',
-        ['daily', date || '']
+        `SELECT t.*, COALESCE(tc.status, 0) as is_completed 
+         FROM todos t 
+         LEFT JOIN todo_completions tc ON t.id = tc.todo_id AND tc.completed_date = ?
+         WHERE t.type = 'daily' AND t.target_date = ? AND t.is_deleted = 0`,
+        [date, date]
       );
     }
   }
 
-  static async toggleTodo(id: string, isCompleted: boolean) {
+  static async toggleTodo(id: string, date: string, isCompleted: boolean) {
     const db = await this.getDb();
     const now = new Date().toISOString();
+    const completionId = Crypto.randomUUID();
+    
+    // Use INSERT OR REPLACE to handle daily status uniquely for (todo_id, completed_date)
     await db.runAsync(
-      'UPDATE todos SET is_completed = ?, updated_at = ? WHERE id = ?',
-      [isCompleted ? 1 : 0, now, id]
+      `INSERT INTO todo_completions (id, todo_id, completed_date, status, updated_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(todo_id, completed_date) DO UPDATE SET 
+       status = excluded.status,
+       updated_at = excluded.updated_at`,
+      [completionId, id, date, isCompleted ? 1 : 0, now]
     );
   }
 

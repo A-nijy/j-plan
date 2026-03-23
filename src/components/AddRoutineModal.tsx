@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { X, Clock, Check } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TimePickerModal } from './common/TimePickerModal';
+import { ScheduleService } from '../services/ScheduleService';
 
 interface AddRoutineModalProps {
   visible: boolean;
@@ -89,18 +90,52 @@ export default function AddRoutineModal({ visible, onClose, onSave, initialData 
     }
   };
 
-  const handleSave = () => {
-    if (!title.trim()) return;
-    onSave({
-      id: initialData?.id,
-      title,
-      description,
-      start_time: `${startHour}:${startMin}`,
-      end_time: `${endHour}:${endMin}`,
-      color: selectedColor,
-      days: selectedDays,
-    });
-    onClose();
+  const handleSave = async () => {
+    if (!title.trim()) {
+      Alert.alert('알림', '루틴 이름을 입력해주세요.');
+      return;
+    }
+    
+    if (selectedDays.length === 0) {
+      Alert.alert('알림', '최소 하나 이상의 요일을 선택해주세요.');
+      return;
+    }
+
+    const startTime = `${startHour}:${startMin}`;
+    const endTime = `${endHour}:${endMin}`;
+
+    // Overlap check
+    try {
+      const overlap = await ScheduleService.checkRoutineOverlap(
+        selectedDays, 
+        startTime, 
+        endTime, 
+        initialData?.id
+      );
+
+      if (overlap.hasOverlap && overlap.conflictingItem) {
+        Alert.alert(
+          '루틴 중복',
+          `해당 요일 및 시간대에 이미 다른 루틴이 있습니다.\n\n[중복 루틴]\n${overlap.conflictingItem.title}\n(${overlap.conflictingItem.start_time} - ${overlap.conflictingItem.end_time})`,
+          [{ text: '확인' }]
+        );
+        return;
+      }
+
+      onSave({
+        id: initialData?.id,
+        title,
+        description,
+        start_time: startTime,
+        end_time: endTime,
+        color: selectedColor,
+        days: selectedDays,
+      });
+      onClose();
+    } catch (error) {
+      console.error('Overlap check failed:', error);
+      Alert.alert('오류', '중복 검사 중 문제가 발생했습니다.');
+    }
   };
 
   const onConfirmTimePicker = (h: string, m: string) => {

@@ -25,6 +25,13 @@ interface AddScheduleModalProps {
   }) => void;
   initialDate?: string; // YYYY-MM-DD
   showDatePicker?: boolean;
+  initialValues?: {
+    title?: string;
+    description?: string;
+    start_time?: string;
+    end_time?: string;
+    color?: string;
+  };
 }
 
 const PRESET_COLORS = [
@@ -133,7 +140,9 @@ const DatePickerModal = ({ visible, onClose, onSelect, initialDate }: DatePicker
   );
 };
 
-export default function AddScheduleModal({ visible, onClose, onSave, initialDate, showDatePicker = true }: AddScheduleModalProps) {
+export default function AddScheduleModal({ 
+  visible, onClose, onSave, initialDate, showDatePicker = true, initialValues 
+}: AddScheduleModalProps) {
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -148,20 +157,36 @@ export default function AddScheduleModal({ visible, onClose, onSave, initialDate
 
   useEffect(() => {
     if (visible) {
-      setTitle('');
-      setDescription('');
-      setStartHour('09');
-      setStartMin('00');
-      setEndHour('10');
-      setEndMin('00');
-      setSelectedColor(PRESET_COLORS[0]);
+      setTitle(initialValues?.title || '');
+      setDescription(initialValues?.description || '');
+      
+      if (initialValues?.start_time) {
+        const [h, m] = initialValues.start_time.split(':');
+        setStartHour(h);
+        setStartMin(m);
+      } else {
+        setStartHour('09');
+        setStartMin('00');
+      }
+
+      if (initialValues?.end_time) {
+        const [h, m] = initialValues.end_time.split(':');
+        setEndHour(h);
+        setEndMin(m);
+      } else {
+        setEndHour('10');
+        setEndMin('00');
+      }
+
+      setSelectedColor(initialValues?.color || PRESET_COLORS[0]);
+      
       if (initialDate) {
         setSelectedDate(parseISO(initialDate));
       } else {
         setSelectedDate(new Date());
       }
     }
-  }, [visible, initialDate]);
+  }, [visible, initialDate, initialValues]);
 
   const handleSave = async () => {
     if (!title.trim()) {
