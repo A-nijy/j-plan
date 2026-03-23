@@ -10,6 +10,7 @@ import {
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { TimePickerModal } from './common/TimePickerModal';
+import { ScheduleService } from '../services/ScheduleService';
 
 interface AddScheduleModalProps {
   visible: boolean;
@@ -162,18 +163,34 @@ export default function AddScheduleModal({ visible, onClose, onSave, initialDate
     }
   }, [visible, initialDate]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title.trim()) {
       Alert.alert('알림', '일정을 입력해주세요.');
       return;
     }
+
+    // Overlap check
+    const startTime = `${startHour}:${startMin}`;
+    const endTime = `${endHour}:${endMin}`;
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+
+    const overlap = await ScheduleService.checkOverlap(dateStr, startTime, endTime);
+    if (overlap.hasOverlap && overlap.conflictingItem) {
+      Alert.alert(
+        '일정 중복',
+        `해당 시간에 이미 다른 일정이 있습니다.\n\n[중복 일정]\n${overlap.conflictingItem.title}\n(${overlap.conflictingItem.start_time} - ${overlap.conflictingItem.end_time})`,
+        [{ text: '확인' }]
+      );
+      return;
+    }
+
     onSave({
       title,
       description,
-      start_time: `${startHour}:${startMin}`,
-      end_time: `${endHour}:${endMin}`,
+      start_time: startTime,
+      end_time: endTime,
       color: selectedColor,
-      target_date: format(selectedDate, 'yyyy-MM-dd'),
+      target_date: dateStr,
     });
   };
 

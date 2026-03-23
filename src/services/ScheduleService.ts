@@ -68,6 +68,50 @@ export class ScheduleService {
     return merged;
   }
 
+  static async checkOverlap(date: string, startTime: string, endTime: string, currentId?: string) {
+    const db = await this.getDb();
+    
+    // 1. Check regular schedules
+    // Two intervals [s1, e1] and [s2, e2] overlap if s1 < e2 AND e1 > s2
+    const overlappingSchedules = await db.getAllAsync<Schedule>(
+      `SELECT * FROM schedules 
+       WHERE is_deleted = 0 
+       AND target_date = ? 
+       AND start_time < ? 
+       AND end_time > ?
+       ${currentId ? 'AND id != ?' : ''}`,
+      currentId ? [date, endTime, startTime, currentId] : [date, endTime, startTime]
+    );
+
+    if (overlappingSchedules.length > 0) {
+      return {
+        hasOverlap: true,
+        conflictingItem: overlappingSchedules[0]
+      };
+    }
+
+    // 2. Check routine templates
+    const dayOfWeek = (new Date(date).getDay());
+    const routineTemplates = await RoutineService.getAppliedTemplatesForDay(dayOfWeek);
+    
+    const conflictingRoutine = routineTemplates.find(t => 
+      t.start_time < endTime && t.end_time > startTime
+    );
+
+    if (conflictingRoutine) {
+      return {
+        hasOverlap: true,
+        conflictingItem: {
+          ...conflictingRoutine,
+          title: `[루틴] ${conflictingRoutine.title}`,
+          is_routine: true
+        }
+      };
+    }
+
+    return { hasOverlap: false };
+  }
+
   static async deleteSchedule(id: string) {
     const db = await this.getDb();
     const now = new Date().toISOString();
