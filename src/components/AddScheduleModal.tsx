@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity, ScrollView, Platform, FlatList, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity, ScrollView, Platform, FlatList, Dimensions, Alert } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { X, Clock, Check, Calendar, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -274,7 +274,10 @@ export default function AddScheduleModal({
   }, [visible, initialDate]);
 
   const handleSave = () => {
-    if (!title.trim()) return;
+    if (!title.trim()) {
+      Alert.alert('알림', '일정을 입력해 주세요.');
+      return;
+    }
     onSave({
       title,
       description,
@@ -325,10 +328,10 @@ export default function AddScheduleModal({
           </View>
 
           <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
-            <Text style={styles.label}>제목</Text>
+            <Text style={styles.label}>일정</Text>
             <TextInput
               style={styles.input}
-              placeholder="일정 제목을 입력하세요"
+              placeholder="일정을 입력하세요"
               value={title}
               onChangeText={setTitle}
             />
