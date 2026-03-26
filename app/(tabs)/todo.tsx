@@ -87,67 +87,57 @@ export default function TodoScreen() {
     </TouchableOpacity>
   );
 
+  const completedCount = todos.filter(t => t.is_completed === 1).length;
+  const totalCount = todos.length;
+  const progressPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
   return (
     <View style={styles.container}>
-      {/* Date Navigation */}
-      <View style={styles.dateNav}>
-        <View style={styles.dateDisplay}>
-          <TouchableOpacity style={styles.navBtn} onPress={() => moveDate(-1)}>
-            <ChevronLeft color={COLORS.text} size={24} />
+      {/* Integrated Compact Header */}
+      <View style={styles.controlRegion}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity 
+            style={styles.todayBtn} 
+            onPress={() => setSelectedDate(new Date())}
+          >
+            <Text style={styles.todayBtnText}>오늘</Text>
           </TouchableOpacity>
-          <View style={styles.dateLabelContainer}>
-            <CalendarIcon size={16} color={COLORS.primary} style={{ marginRight: 6 }} />
-            <Text style={styles.dateTextMain}>
-              {format(selectedDate, 'yyyy년 M월 d일 (E)', { locale: ko })}
-            </Text>
+
+          <View style={styles.dateNav}>
+            <TouchableOpacity style={styles.navBtn} onPress={() => moveDate(-1)}>
+              <ChevronLeft color={COLORS.text} size={22} />
+            </TouchableOpacity>
+            <View style={styles.dateLabelContainer}>
+              <Text style={styles.dateText}>
+                {format(selectedDate, 'M월 d일 (E)', { locale: ko })}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.navBtn} onPress={() => moveDate(1)}>
+              <ChevronRight color={COLORS.text} size={22} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.navBtn} onPress={() => moveDate(1)}>
-            <ChevronRight color={COLORS.text} size={24} />
-          </TouchableOpacity>
+
+          <View style={styles.compactProgress}>
+            <Text style={styles.progressValue}>{progressPercentage}%</Text>
+          </View>
         </View>
 
-        <TouchableOpacity 
-          style={styles.todayBtn} 
-          onPress={() => setSelectedDate(new Date())}
-        >
-          <Text style={styles.todayBtnText}>오늘</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.tabContainer}>
-        <TouchableOpacity 
-          style={[styles.tabButton, tab === 'habit' && styles.activeTabButton]} 
-          onPress={() => setTab('habit')}
-        >
-          <Text style={[styles.tabText, tab === 'habit' && styles.activeTabText]}>매일 습관</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tabButton, tab === 'daily' && styles.activeTabButton]} 
-          onPress={() => setTab('daily')}
-        >
-          <Text style={[styles.tabText, tab === 'daily' && styles.activeTabText]}>일일 할 일</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Achievement Rate Section */}
-      <View style={styles.progressSection}>
-        <View style={styles.progressHeader}>
-          <Text style={styles.progressTitle}>오늘의 성취도</Text>
-          <Text style={styles.progressPercentage}>
-            {todos.length > 0 ? Math.round((todos.filter(t => t.is_completed === 1).length / todos.length) * 100) : 0}%
-          </Text>
+        <View style={styles.tabWrapper}>
+          <View style={styles.segmentedControl}>
+            <TouchableOpacity 
+              style={[styles.segmentBtn, tab === 'habit' && styles.activeSegment]} 
+              onPress={() => setTab('habit')}
+            >
+              <Text style={[styles.segmentText, tab === 'habit' && styles.activeSegmentText]}>매일 습관</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.segmentBtn, tab === 'daily' && styles.activeSegment]} 
+              onPress={() => setTab('daily')}
+            >
+              <Text style={[styles.segmentText, tab === 'daily' && styles.activeSegmentText]}>일일 할 일</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.progressBarBg}>
-          <View 
-            style={[
-              styles.progressBarFill, 
-              { width: `${todos.length > 0 ? (todos.filter(t => t.is_completed === 1).length / todos.length) * 100 : 0}%` }
-            ]} 
-          />
-        </View>
-        <Text style={styles.progressStats}>
-          {todos.filter(t => t.is_completed === 1).length} / {todos.length} 완료됨
-        </Text>
       </View>
       
       <FlatList
@@ -186,25 +176,31 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  dateNav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: SPACING.md,
+  controlRegion: {
     backgroundColor: COLORS.surface,
+    paddingVertical: SPACING.md,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  dateDisplay: {
+  headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  dateNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
   },
   dateLabelContainer: {
-    flexDirection: 'row',
+    paddingHorizontal: SPACING.sm,
+    minWidth: 140,
     alignItems: 'center',
-    marginHorizontal: SPACING.xs,
   },
-  dateTextMain: {
+  dateText: {
     fontSize: 16,
     fontWeight: 'bold',
     color: COLORS.text,
@@ -214,83 +210,57 @@ const styles = StyleSheet.create({
   },
   todayBtn: {
     backgroundColor: COLORS.primary + '15',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 6,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 5,
     borderRadius: BORDER_RADIUS.sm,
+    width: 44,
+    alignItems: 'center',
   },
   todayBtnText: {
     color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  compactProgress: {
+    width: 44,
+    alignItems: 'flex-end',
+  },
+  progressValue: {
     fontSize: 14,
     fontWeight: 'bold',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    padding: SPACING.md,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: SPACING.sm,
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  activeTabButton: {
-    borderBottomColor: COLORS.primary,
-  },
-  tabText: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-  },
-  activeTabText: {
     color: COLORS.primary,
-    fontWeight: 'bold',
   },
-  progressSection: {
-    backgroundColor: COLORS.surface,
-    margin: SPACING.md,
-    padding: SPACING.md,
+  tabWrapper: {
+    paddingHorizontal: SPACING.md,
+  },
+  segmentedControl: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.background,
     borderRadius: BORDER_RADIUS.md,
+    padding: 2,
+  },
+  segmentBtn: {
+    flex: 1,
+    paddingVertical: 6,
+    alignItems: 'center',
+    borderRadius: BORDER_RADIUS.md - 2,
+  },
+  activeSegment: {
+    backgroundColor: COLORS.surface,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 1,
   },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: SPACING.xs,
-  },
-  progressTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+  segmentText: {
+    fontSize: 13,
     color: COLORS.textSecondary,
+    fontWeight: '500',
   },
-  progressPercentage: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  activeSegmentText: {
     color: COLORS.primary,
-  },
-  progressBarBg: {
-    height: 8,
-    backgroundColor: COLORS.background,
-    borderRadius: 4,
-    marginBottom: SPACING.xs,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: COLORS.primary,
-    borderRadius: 4,
-  },
-  progressStats: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    textAlign: 'right',
+    fontWeight: 'bold',
   },
   listContent: {
     padding: SPACING.md,

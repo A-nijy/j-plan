@@ -327,6 +327,7 @@ const styles = StyleSheet.create({
   },
   filterBar: {
     backgroundColor: COLORS.surface,
+    paddingVertical: SPACING.xs, // Add padding for symmetry
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },

@@ -19,7 +19,12 @@ export default function TabsLayout() {
         },
         headerStyle: {
           backgroundColor: COLORS.surface,
+          borderBottomWidth: 1,
+          borderBottomColor: COLORS.border,
+          elevation: 0, // Remove Android shadow
+          shadowOpacity: 0, // Remove iOS shadow
         },
+        headerShadowVisible: false,
         headerTitleStyle: {
           fontWeight: 'bold',
           color: COLORS.text,
