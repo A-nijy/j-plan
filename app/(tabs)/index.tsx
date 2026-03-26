@@ -13,6 +13,7 @@ import { WeeklySettings, WeeklySettingsService } from '../../src/services/Weekly
 import { ScheduleDetailModal } from '../../src/components/ScheduleDetailModal';
 import { RoutineService } from '../../src/services/RoutineService';
 import RestoreRoutineModal from '../../src/components/RestoreRoutineModal';
+import { SeedService } from '../../src/services/SeedService';
 
 export default function TodayScreen() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -174,6 +175,18 @@ export default function TodayScreen() {
           <View style={styles.headerRow}>
             <Text style={styles.sectionTitle}>오늘의 일정</Text>
             <View style={styles.headerButtons}>
+              <TouchableOpacity 
+                style={styles.seedButton}
+                onPress={async () => {
+                  const success = await SeedService.seedTestData();
+                  if (success) {
+                    Alert.alert('성공', '테스트 데이터가 생성되었습니다. 앱을 재시작하거나 화면을 새로고침해주세요.');
+                    loadSchedules();
+                  }
+                }}
+              >
+                <Text style={styles.seedButtonText}>SEED</Text>
+              </TouchableOpacity>
               {hasDeletedRoutines && (
                 <TouchableOpacity 
                   style={styles.restoreHeaderButton}
@@ -317,6 +330,19 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  seedButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    backgroundColor: COLORS.error + '15',
+    borderWidth: 1,
+    borderColor: COLORS.error,
+  },
+  seedButtonText: {
+    fontSize: 10,
+    color: COLORS.error,
+    fontWeight: 'bold',
   },
   addButton: {
     width: 36,

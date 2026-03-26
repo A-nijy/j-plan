@@ -1,10 +1,31 @@
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { Database, Cloud, HelpCircle, Info } from 'lucide-react-native';
+import { clearAllData } from '../../src/services/database';
 
 export default function SettingsScreen() {
-  const MenuItem = ({ icon: Icon, title, subtitle }: any) => (
-    <TouchableOpacity style={styles.menuItem}>
+  const handleReset = async () => {
+    Alert.alert(
+      '데이터 초기화',
+      '정말로 모든 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없으며 모든 일정과 루틴, 투두가 삭제됩니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        { 
+          text: '초기화', 
+          style: 'destructive',
+          onPress: async () => {
+            const success = await clearAllData();
+            if (success) {
+              Alert.alert('완료', '모든 데이터가 초기화되었습니다.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const MenuItem = ({ icon: Icon, title, subtitle, onPress }: any) => (
+    <TouchableOpacity style={styles.menuItem} onPress={onPress}>
       <View style={styles.iconContainer}>
         <Icon color={COLORS.primary} size={24} />
       </View>
@@ -26,11 +47,13 @@ export default function SettingsScreen() {
           icon={Cloud} 
           title="Google Drive 백업" 
           subtitle="현재 데이터를 구글 드라이브에 저장합니다."
+          onPress={() => Alert.alert('알림', '준비 중인 기능입니다.')}
         />
         <MenuItem 
           icon={Database} 
           title="데이터 초기화" 
           subtitle="모든 일정과 투두 데이터를 삭제합니다."
+          onPress={handleReset}
         />
       </View>
       

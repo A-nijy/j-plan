@@ -252,3 +252,31 @@ export const initDatabase = async () => {
     throw error;
   }
 };
+
+export const clearAllData = async () => {
+  try {
+    const db = await getDb();
+    
+    // Deleting data from all tables
+    await db.execAsync(`
+      DELETE FROM schedules;
+      DELETE FROM todos;
+      DELETE FROM todo_completions;
+      DELETE FROM todo_content_history;
+      DELETE FROM routine_templates;
+      DELETE FROM routine_configs;
+      DELETE FROM routine_content_history;
+      DELETE FROM routine_exceptions;
+      DELETE FROM weekly_settings;
+    `);
+
+    // Restore default settings
+    await db.runAsync('INSERT INTO weekly_settings (id, view_mode, grid_interval, start_hour, end_hour) VALUES ("default", "combined", 60, 0, 23)');
+    
+    console.log('All data cleared');
+    return true;
+  } catch (error) {
+    console.error('Failed to clear data:', error);
+    return false;
+  }
+};
