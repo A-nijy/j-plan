@@ -72,4 +72,13 @@ export class TodoService {
       [now, id]
     );
   }
+
+  static async updateTodo(id: string, content: string) {
+    const db = await this.getDb();
+    const now = new Date().toISOString();
+    await db.runAsync(
+      'UPDATE todos SET content = ?, updated_at = ? WHERE id = ?',
+      [content, now, id]
+    );
+  }
 }

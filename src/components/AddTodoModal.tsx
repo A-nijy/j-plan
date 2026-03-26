@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { X } from 'lucide-react-native';
@@ -7,20 +7,29 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 interface AddTodoModalProps {
   visible: boolean;
   type: 'habit' | 'daily';
+  initialValues?: { id: string; content: string };
   onClose: () => void;
   onSave: (todo: {
+    id?: string;
     content: string;
     type: 'habit' | 'daily';
   }) => void;
 }
 
-export default function AddTodoModal({ visible, type, onClose, onSave }: AddTodoModalProps) {
+export default function AddTodoModal({ visible, type, initialValues, onClose, onSave }: AddTodoModalProps) {
   const insets = useSafeAreaInsets();
   const [content, setContent] = useState('');
+
+  useEffect(() => {
+    if (visible) {
+      setContent(initialValues?.content || '');
+    }
+  }, [visible, initialValues]);
 
   const handleSave = () => {
     if (!content.trim()) return;
     onSave({
+      id: initialValues?.id,
       content,
       type,
     });
@@ -28,12 +37,23 @@ export default function AddTodoModal({ visible, type, onClose, onSave }: AddTodo
     onClose();
   };
 
+  const getTitle = () => {
+    if (initialValues) {
+      return type === 'habit' ? '습관 수정' : '할 일 수정';
+    }
+    return type === 'habit' ? '습관 추가' : '할 일 추가';
+  };
+
+  const getButtonText = () => {
+    return initialValues ? '수정하기' : '추가하기';
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.modalOverlay}>
         <View style={[styles.modalContent, { paddingBottom: insets.bottom + SPACING.lg }]}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>{type === 'habit' ? '습관 추가' : '할 일 추가'}</Text>
+            <Text style={styles.headerTitle}>{getTitle()}</Text>
             <TouchableOpacity onPress={onClose}>
               <X color={COLORS.text} size={24} />
             </TouchableOpacity>
@@ -51,7 +71,7 @@ export default function AddTodoModal({ visible, type, onClose, onSave }: AddTodo
           </View>
 
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>추가하기</Text>
+            <Text style={styles.saveButtonText}>{getButtonText()}</Text>
           </TouchableOpacity>
         </View>
       </View>

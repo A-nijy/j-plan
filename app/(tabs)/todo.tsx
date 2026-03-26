@@ -12,6 +12,7 @@ export default function TodoScreen() {
   const [tab, setTab] = useState<'habit' | 'daily'>('habit');
   const [todos, setTodos] = useState<Todo[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [editingTodo, setEditingTodo] = useState<{ id: string; content: string } | undefined>(undefined);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -33,17 +34,24 @@ export default function TodoScreen() {
     setSelectedDate(prev => offset > 0 ? addDays(prev, offset) : subDays(prev, -offset));
   };
 
-  const handleAddTodo = async (newTodo: any) => {
+  const handleSaveTodo = async (todoData: any) => {
     try {
-      await TodoService.createTodo({
-        ...newTodo,
-        is_completed: 0,
-        target_date: tab === 'daily' ? dateStr : null,
-        habit_days: tab === 'habit' ? '1,2,3,4,5,6,0' : null,
-      });
+      if (todoData.id) {
+        // Edit mode
+        await TodoService.updateTodo(todoData.id, todoData.content);
+      } else {
+        // Add mode
+        await TodoService.createTodo({
+          ...todoData,
+          is_completed: 0,
+          target_date: tab === 'daily' ? dateStr : null,
+          habit_days: tab === 'habit' ? '1,2,3,4,5,6,0' : null,
+        });
+      }
       loadTodos();
+      setEditingTodo(undefined);
     } catch (error) {
-      Alert.alert('오류', '할 일을 저장하지 못했습니다.');
+      Alert.alert('오류', '데이터를 저장하지 못했습니다.');
     }
   };
 
@@ -56,25 +64,36 @@ export default function TodoScreen() {
     }
   };
 
-  const handleDeleteTodo = (id: string) => {
-    Alert.alert('할 일 삭제', '정말로 이 항목을 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      { 
-        text: '삭제', 
-        style: 'destructive',
-        onPress: async () => {
-          await TodoService.deleteTodo(id);
-          loadTodos();
-        }
-      },
-    ]);
+  const handleLongPress = (item: Todo) => {
+    Alert.alert(
+      '할 일 관리',
+      `"${item.content}"`,
+      [
+        { text: '취소', style: 'cancel' },
+        { 
+          text: '수정', 
+          onPress: () => {
+            setEditingTodo({ id: item.id, content: item.content });
+            setModalVisible(true);
+          }
+        },
+        { 
+          text: '삭제', 
+          style: 'destructive',
+          onPress: async () => {
+            await TodoService.deleteTodo(item.id);
+            loadTodos();
+          }
+        },
+      ]
+    );
   };
 
   const renderItem = ({ item }: { item: Todo }) => (
     <TouchableOpacity 
       style={styles.todoItem} 
       onPress={() => handleToggle(item.id, item.is_completed)}
-      onLongPress={() => handleDeleteTodo(item.id)}
+      onLongPress={() => handleLongPress(item)}
     >
       {item.is_completed === 1 ? (
         <CheckCircle2 color={COLORS.primary} size={24} />
@@ -164,8 +183,12 @@ export default function TodoScreen() {
       <AddTodoModal
         visible={modalVisible}
         type={tab}
-        onClose={() => setModalVisible(false)}
-        onSave={handleAddTodo}
+        initialValues={editingTodo}
+        onClose={() => {
+          setModalVisible(false);
+          setEditingTodo(undefined);
+        }}
+        onSave={handleSaveTodo}
       />
     </View>
   );
