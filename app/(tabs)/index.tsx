@@ -10,12 +10,15 @@ import AddScheduleModal from '../../src/components/AddScheduleModal';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { WeeklySettings, WeeklySettingsService } from '../../src/services/WeeklySettingsService';
+import { ScheduleDetailModal } from '../../src/components/ScheduleDetailModal';
 
 export default function TodayScreen() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [initialValues, setInitialValues] = useState<any>(null);
   const [settings, setSettings] = useState<WeeklySettings | null>(null);
+  const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
+  const [detailVisible, setDetailVisible] = useState(false);
   const today = format(new Date(), 'yyyy-MM-dd');
 
   const loadSettings = async () => {
@@ -65,31 +68,22 @@ export default function TodayScreen() {
   };
 
   const handlePressSchedule = (schedule: Schedule) => {
-    if (schedule.is_routine) {
-      Alert.alert('루틴 설정', '해당 루틴을 어떻게 처리할까요?', [
-        { text: '취소', style: 'cancel' },
-        { 
-          text: '오늘만 삭제', 
-          style: 'destructive',
-          onPress: async () => {
-            const templateId = schedule.id.split('::')[1];
-            await ScheduleService.excludeRoutineFromDate(templateId, today);
-            loadSchedules();
-          }
-        }
-      ]);
-    } else {
-      Alert.alert('일정 삭제', '정말로 이 일정을 삭제하시겠습니까?', [
-        { text: '취소', style: 'cancel' },
-        { 
-          text: '삭제', 
-          style: 'destructive',
-          onPress: async () => {
-            await ScheduleService.deleteScheduleAtDate(schedule.id);
-            loadSchedules();
-          }
-        },
-      ]);
+    setSelectedSchedule(schedule);
+    setDetailVisible(true);
+  };
+
+  const handleDeleteSchedule = async (schedule: Schedule) => {
+    try {
+      if (schedule.is_routine) {
+        const templateId = schedule.id.split('::')[1];
+        await ScheduleService.excludeRoutineFromDate(templateId, today);
+      } else {
+        await ScheduleService.deleteScheduleAtDate(schedule.id);
+      }
+      setDetailVisible(false);
+      loadSchedules();
+    } catch (error) {
+      Alert.alert('오류', '삭제하지 못했습니다.');
     }
   };
 
@@ -211,6 +205,13 @@ export default function TodayScreen() {
         showDatePicker={false}
         initialDate={today}
         initialValues={initialValues}
+      />
+
+      <ScheduleDetailModal
+        visible={detailVisible}
+        onClose={() => setDetailVisible(false)}
+        schedule={selectedSchedule}
+        onDelete={handleDeleteSchedule}
       />
     </View>
   );

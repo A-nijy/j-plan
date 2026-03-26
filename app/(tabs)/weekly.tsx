@@ -11,6 +11,7 @@ import { ko } from 'date-fns/locale';
 import AddScheduleModal from '../../src/components/AddScheduleModal';
 import { WeeklySettingsService, WeeklySettings } from '../../src/services/WeeklySettingsService';
 import { WeeklySettingsModal } from '../../src/components/WeeklySettingsModal';
+import { ScheduleDetailModal } from '../../src/components/ScheduleDetailModal';
 
 export default function WeeklyScreen() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -20,6 +21,8 @@ export default function WeeklyScreen() {
   const [settings, setSettings] = useState<WeeklySettings | null>(null);
   const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
+  const [detailVisible, setDetailVisible] = useState(false);
   const today = new Date();
   
   const loadSettings = useCallback(async () => {
@@ -71,35 +74,23 @@ export default function WeeklyScreen() {
   };
 
   const handlePressSchedule = (schedule: Schedule) => {
-    if (schedule.is_routine) {
-      // Routine Interaction
-      const dateStr = schedule.target_date || format(addDays(currentWeekStart, (schedule.day_of_week! + 6) % 7), 'yyyy-MM-dd');
-      
-      Alert.alert('루틴 설정', '해당 루틴을 어떻게 처리할까요?', [
-        { text: '취소', style: 'cancel' },
-        { 
-          text: '오늘만 삭제', 
-          style: 'destructive',
-          onPress: async () => {
-            const templateId = schedule.id.split('::')[1]; // routine::id::date
-            await ScheduleService.excludeRoutineFromDate(templateId, dateStr);
-            loadWeeklySchedules();
-          }
-        }
-      ]);
-    } else {
-      // Regular Schedule Interaction (Delete)
-      Alert.alert('일정 삭제', '정말로 이 일정을 삭제하시겠습니까?', [
-        { text: '취소', style: 'cancel' },
-        { 
-          text: '삭제', 
-          style: 'destructive',
-          onPress: async () => {
-            await ScheduleService.deleteScheduleAtDate(schedule.id);
-            loadWeeklySchedules();
-          }
-        },
-      ]);
+    setSelectedSchedule(schedule);
+    setDetailVisible(true);
+  };
+
+  const handleDeleteSchedule = async (schedule: Schedule) => {
+    try {
+      if (schedule.is_routine) {
+        const dateStr = schedule.target_date || format(addDays(currentWeekStart, (schedule.day_of_week! + 6) % 7), 'yyyy-MM-dd');
+        const templateId = schedule.id.split('::')[1];
+        await ScheduleService.excludeRoutineFromDate(templateId, dateStr);
+      } else {
+        await ScheduleService.deleteScheduleAtDate(schedule.id);
+      }
+      setDetailVisible(false);
+      loadWeeklySchedules();
+    } catch (error) {
+      Alert.alert('오류', '삭제하지 못했습니다.');
     }
   };
 
@@ -223,6 +214,13 @@ export default function WeeklyScreen() {
           onSave={loadSettings}
         />
       )}
+
+      <ScheduleDetailModal
+        visible={detailVisible}
+        onClose={() => setDetailVisible(false)}
+        schedule={selectedSchedule}
+        onDelete={handleDeleteSchedule}
+      />
     </View>
   );
 }
