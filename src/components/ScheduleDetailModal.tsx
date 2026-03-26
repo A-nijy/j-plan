@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback } from 'react-native';
+import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback, Alert } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { Schedule } from '../types';
 import { X, Calendar, Clock, AlignLeft, Trash2 } from 'lucide-react-native';
@@ -18,6 +18,21 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
   onDelete,
 }) => {
   if (!schedule) return null;
+
+  const handleDeletePress = () => {
+    Alert.alert(
+      schedule.is_routine ? '루틴 삭제' : '일정 삭제',
+      schedule.is_routine ? '이 루틴을 오늘 일정에서 삭제할까요?' : '이 일정을 정말로 삭제하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        { 
+          text: '삭제', 
+          style: 'destructive', 
+          onPress: () => onDelete(schedule) 
+        }
+      ]
+    );
+  };
 
   return (
     <Modal
@@ -42,42 +57,37 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
 
               <ScrollView style={styles.content}>
                 <View style={styles.infoRow}>
-                  <Calendar size={18} color={COLORS.primary} style={styles.icon} />
-                  <View>
-                    <Text style={styles.label}>유형</Text>
-                    <Text style={styles.value}>
-                      {schedule.is_routine ? '루틴 일정' : '일반 일정'}
-                    </Text>
-                  </View>
+                  <Calendar size={20} color={COLORS.primary} style={styles.icon} />
+                  <Text style={styles.value}>
+                    {schedule.is_routine ? '루틴 일정' : '일반 일정'}
+                  </Text>
                 </View>
 
                 <View style={styles.infoRow}>
-                  <Clock size={18} color={COLORS.primary} style={styles.icon} />
-                  <View>
-                    <Text style={styles.label}>시간</Text>
-                    <Text style={styles.value}>
-                      {schedule.start_time} - {schedule.end_time}
-                    </Text>
-                  </View>
+                  <Clock size={20} color={COLORS.primary} style={styles.icon} />
+                  <Text style={styles.value}>
+                    {schedule.start_time} - {schedule.end_time}
+                  </Text>
                 </View>
 
-                {schedule.description ? (
-                  <View style={styles.infoRow}>
-                    <AlignLeft size={18} color={COLORS.primary} style={styles.icon} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.label}>설명</Text>
-                      <Text style={styles.descriptionText}>{schedule.description}</Text>
-                    </View>
-                  </View>
-                ) : null}
+                <View style={[styles.infoRow, { alignItems: 'flex-start' }]}>
+                  <AlignLeft size={20} color={COLORS.primary} style={styles.icon} />
+                  <Text style={[
+                    styles.value, 
+                    { flex: 1, fontWeight: 'normal' },
+                    !schedule.description && { color: COLORS.textSecondary, fontStyle: 'italic' }
+                  ]}>
+                    {schedule.description || '(내용 없음)'}
+                  </Text>
+                </View>
               </ScrollView>
 
               <View style={styles.footer}>
                 <TouchableOpacity 
                   style={styles.deleteButton}
-                  onPress={() => onDelete(schedule)}
+                  onPress={handleDeletePress}
                 >
-                  <Trash2 size={18} color={COLORS.error} style={{ marginRight: 8 }} />
+                  <Trash2 size={16} color={COLORS.error} style={{ marginRight: 6 }} />
                   <Text style={styles.deleteButtonText}>
                     {schedule.is_routine ? '루틴 오늘만 삭제' : '일정 삭제'}
                   </Text>
@@ -144,26 +154,17 @@ const styles = StyleSheet.create({
   },
   infoRow: {
     flexDirection: 'row',
-    marginBottom: SPACING.lg,
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
   },
   icon: {
-    marginTop: 2,
-    marginRight: 12,
-  },
-  label: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginBottom: 4,
+    marginRight: 16,
   },
   value: {
-    fontSize: 16,
+    fontSize: 17,
     color: COLORS.text,
-    fontWeight: '500',
-  },
-  descriptionText: {
-    fontSize: 15,
-    color: COLORS.text,
-    lineHeight: 22,
+    fontWeight: '600',
+    lineHeight: 24,
   },
   footer: {
     padding: SPACING.lg,
@@ -175,10 +176,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
     paddingHorizontal: SPACING.xl,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.error + '10', // Light error background
+    backgroundColor: COLORS.error + '10',
     width: '100%',
   },
   deleteButtonText: {
