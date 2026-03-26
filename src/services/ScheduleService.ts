@@ -117,8 +117,8 @@ export class ScheduleService {
     
     // 1. Check regular schedules
     const schedules = await db.getAllAsync<Schedule>(
-      `SELECT * FROM schedules WHERE is_deleted = 0 AND target_date = ? ${currentId ? 'AND id != ?' : ''}`,
-      currentId ? [date, currentId] : [date]
+      `SELECT * FROM schedules WHERE is_deleted = 0 AND target_date = ? ${currentId && !currentId.startsWith('routine::') ? 'AND id != ?' : ''}`,
+      currentId && !currentId.startsWith('routine::') ? [date, currentId] : [date]
     );
 
     const conflictingSchedule = schedules.find(s => {
@@ -146,9 +146,15 @@ export class ScheduleService {
     );
     const excludedIds = new Set(exclusions.map(e => e.routine_template_id));
 
+    // If currentId is a routine, we should exclude its template from overlap check
+    const excludeRoutineTemplateId = currentId?.startsWith('routine::') ? currentId.split('::')[1] : null;
+
     const conflictingRoutine = routineTemplates
       .filter(t => !excludedIds.has(t.id))
       .find(t => {
+        // Exclude the routine itself we're currently "overriding" or "editing"
+        if (excludeRoutineTemplateId && t.id === excludeRoutineTemplateId) return false;
+        
         const tStart = this.timeToMinutes(t.start_time);
         const tEnd = this.timeToMinutes(t.end_time, true);
         return tStart < endMin && tEnd > startMin;

@@ -201,7 +201,7 @@ export default function AddScheduleModal({
     const endTime = `${endHour}:${endMin}`;
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
-    const overlap = await ScheduleService.checkOverlap(dateStr, startTime, endTime);
+    const overlap = await ScheduleService.checkOverlap(dateStr, startTime, endTime, initialValues?.id);
     if (overlap.hasOverlap && overlap.conflictingItem) {
       Alert.alert(
         '일정 중복',
