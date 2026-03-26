@@ -16,6 +16,7 @@ export interface Schedule extends BaseEntity {
   day_of_week?: number; // 0-6 (Sun-Sat), null for specific date
   target_date?: string;  // YYYY-MM-DD, null for recurring weekly
   is_routine?: boolean;  // Flag for routine templates
+  is_completed?: boolean;
 }
 
 export interface Todo extends BaseEntity {

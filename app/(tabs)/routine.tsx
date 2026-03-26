@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { Plus, Trash2, Clock as ClockIcon } from 'lucide-react-native';
@@ -16,6 +16,7 @@ export default function RoutineScreen() {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<(RoutineTemplate & { days: number[] }) | null>(null);
+  const [selectedFilterDay, setSelectedFilterDay] = useState<number>(-1); // -1 for All
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -27,6 +28,10 @@ export default function RoutineScreen() {
           return { ...t, days: configs.map(c => c.day_of_week) };
         })
       );
+      
+      // Sort chronologically by start_time
+      enrichedTemplates.sort((a, b) => a.start_time.localeCompare(b.start_time));
+      
       setTemplates(enrichedTemplates);
     } catch (error) {
       console.error('Failed to fetch templates:', error);
@@ -40,6 +45,10 @@ export default function RoutineScreen() {
       fetchTemplates();
     }, [fetchTemplates])
   );
+
+  const filteredTemplates = selectedFilterDay === -1 
+    ? templates 
+    : templates.filter(t => t.days.includes(selectedFilterDay));
 
   const handleDeleteTemplate = (id: string, title: string) => {
     Alert.alert(
@@ -136,17 +145,43 @@ export default function RoutineScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.filterBar}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScrollContent}
+        >
+          <TouchableOpacity 
+            style={[styles.filterBtn, selectedFilterDay === -1 && styles.filterBtnActive]}
+            onPress={() => setSelectedFilterDay(-1)}
+          >
+            <Text style={[styles.filterBtnText, selectedFilterDay === -1 && styles.filterBtnTextActive]}>전체</Text>
+          </TouchableOpacity>
+          {DAY_LABELS.map((label, idx) => (
+            <TouchableOpacity 
+              key={idx}
+              style={[styles.filterBtn, selectedFilterDay === idx && styles.filterBtnActive]}
+              onPress={() => setSelectedFilterDay(idx)}
+            >
+              <Text style={[styles.filterBtnText, selectedFilterDay === idx && styles.filterBtnTextActive]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
       {loading ? (
         <ActivityIndicator style={{ marginTop: 50 }} color={COLORS.primary} />
       ) : (
         <FlatList
-          data={templates}
+          data={filteredTemplates}
           keyExtractor={(item) => item.id}
           renderItem={renderTemplateItem}
           contentContainerStyle={[styles.listContent, { paddingTop: SPACING.md }]}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>등록된 루틴이 없습니다.</Text>
+              <Text style={styles.emptyText}>
+                {selectedFilterDay === -1 ? '등록된 루틴이 없습니다.' : `${DAY_LABELS[selectedFilterDay]}요일 루틴이 없습니다.`}
+              </Text>
               <Text style={styles.emptySubText}>자주 반복되는 일정을 템플릿으로 만들어보세요.</Text>
             </View>
           }
@@ -289,5 +324,37 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
+  },
+  filterBar: {
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  filterScrollContent: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    flexDirection: 'row',
+  },
+  filterBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  filterBtnActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterBtnText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  filterBtnTextActive: {
+    color: 'white',
+    fontWeight: 'bold',
   },
 });

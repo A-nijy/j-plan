@@ -4,7 +4,7 @@ import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { CircularClock } from '../../src/components/CircularClock';
 import { ScheduleService } from '../../src/services/ScheduleService';
 import { Schedule } from '../../src/types';
-import { Plus, Eye, EyeOff } from 'lucide-react-native';
+import { Plus, Eye, EyeOff, Check } from 'lucide-react-native';
 import { format } from 'date-fns';
 import AddScheduleModal from '../../src/components/AddScheduleModal';
 import { useFocusEffect } from '@react-navigation/native';
@@ -72,24 +72,8 @@ export default function TodayScreen() {
           text: '오늘만 삭제', 
           style: 'destructive',
           onPress: async () => {
-            const templateId = schedule.id.split('-')[1];
+            const templateId = schedule.id.split('::')[1];
             await ScheduleService.excludeRoutineFromDate(templateId, today);
-            loadSchedules();
-          }
-        },
-        {
-          text: '오늘만 변경',
-          onPress: async () => {
-            const templateId = schedule.id.split('-')[1];
-            await ScheduleService.excludeRoutineFromDate(templateId, today);
-            setInitialValues({
-              title: schedule.title,
-              description: schedule.description,
-              start_time: schedule.start_time,
-              end_time: schedule.end_time,
-              color: schedule.color,
-            });
-            setModalVisible(true);
             loadSchedules();
           }
         }
@@ -101,7 +85,7 @@ export default function TodayScreen() {
           text: '삭제', 
           style: 'destructive',
           onPress: async () => {
-            await ScheduleService.deleteSchedule(schedule.id);
+            await ScheduleService.deleteScheduleAtDate(schedule.id);
             loadSchedules();
           }
         },
@@ -115,6 +99,24 @@ export default function TodayScreen() {
     return hours + minutes / 60;
   }
 
+  const toggleCompletion = async (schedule: Schedule) => {
+    try {
+      await ScheduleService.toggleScheduleCompletion(
+        schedule.id,
+        today,
+        !!schedule.is_routine,
+        !!schedule.is_completed
+      );
+      loadSchedules();
+    } catch (error) {
+      Alert.alert('오류', '상태를 변경하지 못했습니다.');
+    }
+  };
+
+  const completedCount = schedules.filter(s => s.is_completed).length;
+  const totalCount = schedules.length;
+  const progressPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
   const chartData = schedules.map(s => ({
     startHour: timeToFloat(s.start_time),
     endHour: timeToFloat(s.end_time, true),
@@ -127,7 +129,7 @@ export default function TodayScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {settings?.show_circular_clock === 1 && (
           <View style={styles.clockContainer}>
-            <CircularClock data={chartData} />
+            <CircularClock data={chartData} progress={progressPercentage} />
           </View>
         )}
         
@@ -168,19 +170,30 @@ export default function TodayScreen() {
                 style={styles.scheduleItem}
                 onPress={() => handlePressSchedule(item)}
               >
-                <View style={[styles.colorIndicator, { backgroundColor: item.color }]} />
-                <View style={styles.scheduleInfo}>
-                  <View style={styles.titleRow}>
-                    <Text style={styles.scheduleTitle}>{item.title}</Text>
-                    {item.is_routine && (
-                      <View style={styles.routineBadge}>
-                        <Text style={styles.routineBadgeText}>루틴</Text>
-                      </View>
-                    )}
+                <View style={[styles.colorBar, { backgroundColor: item.color }]} />
+                <View style={styles.scheduleCardContent}>
+                  <View style={styles.scheduleInfo}>
+                    <View style={styles.titleRow}>
+                      <Text style={[styles.scheduleTitle, item.is_completed && styles.completedText]}>
+                        {item.title}
+                      </Text>
+                      {item.is_routine && (
+                        <View style={styles.routineBadge}>
+                          <Text style={styles.routineBadgeText}>루틴</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.scheduleTime, item.is_completed && styles.completedText]}>
+                      {item.start_time} - {item.end_time}
+                    </Text>
                   </View>
-                  <Text style={styles.scheduleTime}>
-                    {item.start_time} - {item.end_time}
-                  </Text>
+                  
+                  <TouchableOpacity 
+                    style={[styles.checkbox, item.is_completed && { backgroundColor: item.color, borderColor: item.color }]}
+                    onPress={() => toggleCompletion(item)}
+                  >
+                    {item.is_completed && <Check size={14} color="white" strokeWidth={3} />}
+                  </TouchableOpacity>
                 </View>
               </TouchableOpacity>
             ))
@@ -258,22 +271,39 @@ const styles = StyleSheet.create({
   },
   scheduleItem: {
     flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: COLORS.surface,
-    padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     marginBottom: SPACING.sm,
+    overflow: 'hidden',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
-  colorIndicator: {
-    width: 4,
-    height: '100%',
-    borderRadius: 2,
-    marginRight: SPACING.md,
+  colorBar: {
+    width: 6,
+  },
+  scheduleCardContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.md,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    marginLeft: SPACING.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surface,
+  },
+  completedText: {
+    textDecorationLine: 'line-through',
+    opacity: 0.6,
   },
   scheduleInfo: {
     flex: 1,

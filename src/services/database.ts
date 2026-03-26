@@ -25,6 +25,7 @@ export const initDatabase = async () => {
         color TEXT NOT NULL,
         day_of_week INTEGER,
         target_date TEXT,
+        is_completed INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
         is_deleted INTEGER DEFAULT 0
@@ -37,6 +38,9 @@ export const initDatabase = async () => {
     } catch (e) { /* Column might already exist */ }
     try {
       await db.execAsync("ALTER TABLE schedules ADD COLUMN target_date TEXT;");
+    } catch (e) { /* Column might already exist */ }
+    try {
+      await db.execAsync("ALTER TABLE schedules ADD COLUMN is_completed INTEGER DEFAULT 0;");
     } catch (e) { /* Column might already exist */ }
 
     // Todos Table
@@ -113,16 +117,26 @@ export const initDatabase = async () => {
       );
     `);
 
-    // Routine Exceptions Table (Specific dates to hide a routine)
+    // Routine Exceptions Table (Specific dates to hide or mark completed a routine)
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS routine_exceptions (
         id TEXT PRIMARY KEY NOT NULL,
         routine_template_id TEXT NOT NULL,
         exception_date TEXT NOT NULL,
+        is_deleted INTEGER DEFAULT 1,
+        is_completed INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(routine_template_id, exception_date)
       );
     `);
+
+    // Migration for routine_exceptions
+    try {
+      await db.execAsync("ALTER TABLE routine_exceptions ADD COLUMN is_deleted INTEGER DEFAULT 1;");
+    } catch (e) { /* Column might already exist */ }
+    try {
+      await db.execAsync("ALTER TABLE routine_exceptions ADD COLUMN is_completed INTEGER DEFAULT 0;");
+    } catch (e) { /* Column might already exist */ }
 
     // Initialize default settings if not exists
     const existingSettings = await db.getFirstAsync('SELECT id FROM weekly_settings WHERE id = "default"');

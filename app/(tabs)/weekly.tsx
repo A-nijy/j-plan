@@ -81,25 +81,8 @@ export default function WeeklyScreen() {
           text: '오늘만 삭제', 
           style: 'destructive',
           onPress: async () => {
-            const templateId = schedule.id.split('-')[1]; // routine-id-date
+            const templateId = schedule.id.split('::')[1]; // routine::id::date
             await ScheduleService.excludeRoutineFromDate(templateId, dateStr);
-            loadWeeklySchedules();
-          }
-        },
-        {
-          text: '오늘만 변경',
-          onPress: async () => {
-            const templateId = schedule.id.split('-')[1];
-            await ScheduleService.excludeRoutineFromDate(templateId, dateStr);
-            setInitialValues({
-              title: schedule.title,
-              description: schedule.description,
-              start_time: schedule.start_time,
-              end_time: schedule.end_time,
-              color: schedule.color,
-            });
-            setSelectedDay(new Date(dateStr).getDay());
-            setModalVisible(true);
             loadWeeklySchedules();
           }
         }
@@ -112,7 +95,7 @@ export default function WeeklyScreen() {
           text: '삭제', 
           style: 'destructive',
           onPress: async () => {
-            await ScheduleService.deleteSchedule(schedule.id);
+            await ScheduleService.deleteScheduleAtDate(schedule.id);
             loadWeeklySchedules();
           }
         },

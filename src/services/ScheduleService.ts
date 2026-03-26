@@ -34,59 +34,68 @@ export class ScheduleService {
     const dayOfWeek = (new Date(date).getDay());
     
     // 1. Get specific (single) schedules for this date
-    const singleSchedules = await db.getAllAsync<Schedule>(
+    const singleSchedules = (await db.getAllAsync<any>(
       `SELECT * FROM schedules 
        WHERE is_deleted = 0 
        AND target_date = ?
        ORDER BY start_time ASC`,
       [date]
-    );
+    )).map(s => ({
+      ...s,
+      is_routine: false,
+      is_completed: s.is_completed === 1
+    }));
 
     // 2. Get routine templates for this day of week
     const routineTemplates = await RoutineService.getAppliedTemplatesForDay(dayOfWeek);
     
     // 3. Get routine exceptions for this date
-    const exclusions = await db.getAllAsync<{ routine_template_id: string }>(
-      'SELECT routine_template_id FROM routine_exceptions WHERE exception_date = ?',
+    const exceptions = await db.getAllAsync<{ routine_template_id: string, is_deleted: number, is_completed: number }>(
+      'SELECT routine_template_id, is_deleted, is_completed FROM routine_exceptions WHERE exception_date = ?',
       [date]
     );
-    const excludedIds = new Set(exclusions.map(e => e.routine_template_id));
+    
+    const excludedIds = new Set(exceptions.filter(e => e.is_deleted === 1).map(e => e.routine_template_id));
+    const routineCompletions = exceptions.reduce((acc, current) => {
+      acc[current.routine_template_id] = current.is_completed === 1;
+      return acc;
+    }, {} as Record<string, boolean>);
 
     // Convert templates to schedule-like objects
-    // NEW logic: Filter out both manual exclusions AND dynamic overlaps with individual schedules (Auto-Yield)
     const routineSchedules = routineTemplates
       .filter(t => !excludedIds.has(t.id))
       .filter(t => {
-        // Dynamic overlap check with individual schedules
+        // Dynamic overlap check with individual schedules (Auto-Yield)
         const tStartMin = this.timeToMinutes(t.start_time);
         const tEndMin = this.timeToMinutes(t.end_time, true);
 
         const hasOverlap = singleSchedules.some(s => {
           const sStartMin = this.timeToMinutes(s.start_time);
           const sEndMin = this.timeToMinutes(s.end_time, true);
-          // Overlap: s1 < e2 AND e1 > s2
           return sStartMin < tEndMin && sEndMin > tStartMin;
         });
 
-        return !hasOverlap; // Only keep if NO overlap with any individual schedule
+        return !hasOverlap;
       })
       .map(t => ({
         ...t,
-        id: `routine-${t.id}-${date}`,
+        id: `routine::${t.id}::${date}`,
         target_date: date,
         is_routine: true,
-        updated_at: t.created_at,
-        is_deleted: 0
+        is_completed: routineCompletions[t.id] || false
       }));
 
-    // Merge and sort: Put routines first so they render behind regular schedules
+    // Merge and sort: chronologically
     const merged = [...singleSchedules, ...routineSchedules].sort((a, b) => {
-      // 1. Routine first (is_routine: true comes before false)
+      // 1. Sort by start time first
+      const timeCompare = a.start_time.localeCompare(b.start_time);
+      if (timeCompare !== 0) return timeCompare;
+      
+      // 2. If same time, routine first
       if (!!a.is_routine !== !!b.is_routine) {
         return a.is_routine ? -1 : 1;
       }
-      // 2. Then by start time
-      return a.start_time.localeCompare(b.start_time);
+      return 0;
     });
 
     return merged;
@@ -159,13 +168,55 @@ export class ScheduleService {
     return { hasOverlap: false };
   }
 
-  static async excludeRoutineFromDate(routineTemplateId: string, date: string) {
+  static async toggleScheduleCompletion(id: string, date: string, isRoutine: boolean, currentStatus: boolean) {
+    const db = await this.getDb();
+    const newStatus = currentStatus ? 0 : 1;
+
+    try {
+      if (isRoutine) {
+        // For routines, we use routine_exceptions table
+        const templateId = id.split('::')[1];
+        
+        // Use UPSERT (INSERT OR REPLACE)
+        await db.runAsync(
+          `INSERT INTO routine_exceptions (id, routine_template_id, exception_date, is_deleted, is_completed)
+           VALUES (?, ?, ?, 0, ?)
+           ON CONFLICT(routine_template_id, exception_date) 
+           DO UPDATE SET is_completed = EXCLUDED.is_completed, is_deleted = 0`,
+          [Crypto.randomUUID(), templateId, date, newStatus]
+        );
+      } else {
+        // For single schedules, direct update
+        await db.runAsync(
+          'UPDATE schedules SET is_completed = ? WHERE id = ?',
+          [newStatus, id]
+        );
+      }
+    } catch (error) {
+      console.error('Failed to toggle schedule completion:', error);
+      throw error;
+    }
+  }
+
+  static async deleteScheduleAtDate(id: string) {
+    const db = await this.getDb();
+    if (id.startsWith('routine::')) {
+      const [, templateId, date] = id.split('::');
+      await this.excludeRoutineFromDate(templateId, date, 1);
+    } else {
+      await db.runAsync('UPDATE schedules SET is_deleted = 1 WHERE id = ?', [id]);
+    }
+  }
+
+  static async excludeRoutineFromDate(routineTemplateId: string, date: string, isDeleted: number = 1) {
     const db = await this.getDb();
     const id = Crypto.randomUUID();
     await db.runAsync(
-      `INSERT OR IGNORE INTO routine_exceptions (id, routine_template_id, exception_date) 
-       VALUES (?, ?, ?)`,
-      [id, routineTemplateId, date]
+      `INSERT INTO routine_exceptions (id, routine_template_id, exception_date, is_deleted)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(routine_template_id, exception_date) 
+       DO UPDATE SET is_deleted = EXCLUDED.is_deleted`,
+      [id, routineTemplateId, date, isDeleted]
     );
   }
 
@@ -198,14 +249,5 @@ export class ScheduleService {
     }
 
     return { hasOverlap: false };
-  }
-
-  static async deleteScheduleAtDate(id: string) {
-    const db = await this.getDb();
-    const now = new Date().toISOString();
-    await db.runAsync(
-      'UPDATE schedules SET is_deleted = 1, updated_at = ? WHERE id = ?',
-      [now, id]
-    );
   }
 }
