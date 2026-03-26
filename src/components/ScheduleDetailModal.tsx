@@ -85,15 +85,15 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
               </ScrollView>
 
               <View style={styles.footer}>
-                <TouchableOpacity 
-                  style={styles.editButton}
-                  onPress={() => onEdit(schedule)}
-                >
-                  <Edit2 size={16} color="white" style={{ marginRight: 6 }} />
-                  <Text style={styles.editButtonText}>
-                    {schedule.is_routine ? '오늘만 변경' : '일정 변경'}
-                  </Text>
-                </TouchableOpacity>
+                {!schedule.is_routine && (
+                  <TouchableOpacity 
+                    style={styles.editButton}
+                    onPress={() => onEdit(schedule)}
+                  >
+                    <Edit2 size={16} color="white" style={{ marginRight: 6 }} />
+                    <Text style={styles.editButtonText}>일정 변경</Text>
+                  </TouchableOpacity>
+                )}
 
                 <TouchableOpacity 
                   style={styles.deleteButton}

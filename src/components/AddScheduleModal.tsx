@@ -238,7 +238,7 @@ export default function AddScheduleModal({
         <View style={[styles.modalContent, { paddingBottom: insets.bottom + SPACING.lg }]}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>
-              {initialValues?.id ? (initialValues.is_routine ? '오늘만 변경' : '일정 수정') : '새 일정 추가'}
+              {initialValues?.id ? '일정 수정' : '새 일정 추가'}
             </Text>
             <TouchableOpacity onPress={onClose}>
               <X color={COLORS.text} size={24} />
