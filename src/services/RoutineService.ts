@@ -79,13 +79,14 @@ export class RoutineService {
   /**
    * Returns templates assigned to a specific day of the week
    */
-  static async getAppliedTemplatesForDay(dayOfWeek: number) {
+  static async getAppliedTemplatesForDay(dayOfWeek: number, date: string) {
     const db = await this.getDb();
     return await db.getAllAsync<RoutineTemplate>(
       `SELECT t.* FROM routine_templates t
        JOIN routine_configs c ON t.id = c.template_id
-       WHERE c.day_of_week = ?`,
-      [dayOfWeek]
+       WHERE c.day_of_week = ?
+       AND (DATE(t.created_at) <= DATE(?))`,
+      [dayOfWeek, date]
     );
   }
 }

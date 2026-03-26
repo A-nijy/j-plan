@@ -47,7 +47,7 @@ export class ScheduleService {
     }));
 
     // 2. Get routine templates for this day of week
-    const routineTemplates = await RoutineService.getAppliedTemplatesForDay(dayOfWeek);
+    const routineTemplates = await RoutineService.getAppliedTemplatesForDay(dayOfWeek, date);
     
     // 3. Get routine exceptions for this date
     const exceptions = await db.getAllAsync<{ routine_template_id: string, is_deleted: number, is_completed: number }>(
@@ -64,19 +64,6 @@ export class ScheduleService {
     // Convert templates to schedule-like objects
     const routineSchedules = routineTemplates
       .filter(t => !excludedIds.has(t.id))
-      .filter(t => {
-        // Dynamic overlap check with individual schedules (Auto-Yield)
-        const tStartMin = this.timeToMinutes(t.start_time);
-        const tEndMin = this.timeToMinutes(t.end_time, true);
-
-        const hasOverlap = singleSchedules.some(s => {
-          const sStartMin = this.timeToMinutes(s.start_time);
-          const sEndMin = this.timeToMinutes(s.end_time, true);
-          return sStartMin < tEndMin && sEndMin > tStartMin;
-        });
-
-        return !hasOverlap;
-      })
       .map(t => ({
         ...t,
         id: `routine::${t.id}::${date}`,
@@ -137,7 +124,7 @@ export class ScheduleService {
 
     // 2. Check routine templates
     const dayOfWeek = (new Date(date).getDay());
-    const routineTemplates = await RoutineService.getAppliedTemplatesForDay(dayOfWeek);
+    const routineTemplates = await RoutineService.getAppliedTemplatesForDay(dayOfWeek, date);
     
     // Check exclusions
     const exclusions = await db.getAllAsync<{ routine_template_id: string }>(
@@ -227,11 +214,15 @@ export class ScheduleService {
   }
 
   static async checkRoutineOverlap(days: number[], startTime: string, endTime: string, excludeTemplateId?: string) {
+    const db = await this.getDb();
     const startMin = this.timeToMinutes(startTime);
     const endMin = this.timeToMinutes(endTime, true);
     
     for (const day of days) {
-      const routineTemplates = await RoutineService.getAppliedTemplatesForDay(day);
+      // 1. Check against other routine templates
+      // Use today's date for checkRoutineOverlap (future orientation)
+      const todayStr = new Date().toISOString().split('T')[0];
+      const routineTemplates = await RoutineService.getAppliedTemplatesForDay(day, todayStr);
       
       const conflictingRoutine = routineTemplates.find(t => {
         if (excludeTemplateId && t.id === excludeTemplateId) return false;
@@ -249,6 +240,60 @@ export class ScheduleService {
             ...conflictingRoutine,
             title: `[${dayLabel}요일 루틴] ${conflictingRoutine.title}`,
             is_routine: true
+          }
+        };
+      }
+
+      // 2. Check against existing regular schedules on this day of week
+      const dayLabel = ['일', '월', '화', '수', '목', '금', '토'][day];
+      const schedulesOnDay = await db.getAllAsync<Schedule>(
+        'SELECT * FROM schedules WHERE is_deleted = 0 AND day_of_week = ?',
+        [day]
+      );
+
+      // Also check by date if schedules are target_date based
+      // This is tricky because schedules can be for ANY specific date.
+      // But typically, "strict" means if I add a Monday routine, I check ALL Mondays in the schedules table.
+      const conflictingSchedule = schedulesOnDay.find(s => {
+        const sStart = this.timeToMinutes(s.start_time);
+        const sEnd = this.timeToMinutes(s.end_time, true);
+        return sStart < endMin && sEnd > startMin;
+      });
+
+      if (conflictingSchedule) {
+        return {
+          hasOverlap: true,
+          conflictingItem: {
+            ...conflictingSchedule,
+            title: `[${dayLabel}요일 일정] ${conflictingSchedule.title}`,
+            is_routine: false
+          }
+        };
+      }
+
+      // 3. Final check: also check by target_date in schedules if those dates fall on this day of week
+      // (Simplified: check ALL active specific schedules and see if their date matches this day of week)
+      // This covers schedules with target_date = '2023-10-31' which is a Tuesday.
+      const allSchedules = await db.getAllAsync<Schedule>(
+        'SELECT * FROM schedules WHERE is_deleted = 0 AND target_date IS NOT NULL'
+      );
+      
+      const conflictingDateSchedule = allSchedules.find(s => {
+        const sDate = new Date(s.target_date!);
+        if (sDate.getDay() !== day) return false;
+        
+        const sStart = this.timeToMinutes(s.start_time);
+        const sEnd = this.timeToMinutes(s.end_time, true);
+        return sStart < endMin && sEnd > startMin;
+      });
+
+      if (conflictingDateSchedule) {
+        return {
+          hasOverlap: true,
+          conflictingItem: {
+            ...conflictingDateSchedule,
+            title: `[${conflictingDateSchedule.target_date} 일정] ${conflictingDateSchedule.title}`,
+            is_routine: false
           }
         };
       }

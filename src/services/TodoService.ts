@@ -26,12 +26,15 @@ export class TodoService {
     
     if (type === 'habit') {
       // Habits: Show all active habits and their completion status for the specific date
+      // AND filter by creation date
       return await db.getAllAsync<Todo>(
         `SELECT t.*, COALESCE(tc.status, 0) as is_completed 
          FROM todos t 
          LEFT JOIN todo_completions tc ON t.id = tc.todo_id AND tc.completed_date = ?
-         WHERE t.type = 'habit' AND t.is_deleted = 0`,
-        [date]
+         WHERE t.type = 'habit' 
+         AND t.is_deleted = 0
+         AND (DATE(t.created_at) <= DATE(?))`,
+        [date, date]
       );
     } else {
       // Daily: Show items for the specific date and their completion status
