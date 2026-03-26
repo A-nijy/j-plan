@@ -4,13 +4,15 @@ import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { CircularClock } from '../../src/components/CircularClock';
 import { ScheduleService } from '../../src/services/ScheduleService';
 import { Schedule } from '../../src/types';
-import { Plus, Eye, EyeOff, Check } from 'lucide-react-native';
+import { Plus, Eye, EyeOff, Check, RotateCcw } from 'lucide-react-native';
 import { format } from 'date-fns';
 import AddScheduleModal from '../../src/components/AddScheduleModal';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { WeeklySettings, WeeklySettingsService } from '../../src/services/WeeklySettingsService';
 import { ScheduleDetailModal } from '../../src/components/ScheduleDetailModal';
+import { RoutineService } from '../../src/services/RoutineService';
+import RestoreRoutineModal from '../../src/components/RestoreRoutineModal';
 
 export default function TodayScreen() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -19,6 +21,8 @@ export default function TodayScreen() {
   const [settings, setSettings] = useState<WeeklySettings | null>(null);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
+  const [restoreVisible, setRestoreVisible] = useState(false);
+  const [hasDeletedRoutines, setHasDeletedRoutines] = useState(false);
   const today = format(new Date(), 'yyyy-MM-dd');
 
   const loadSettings = async () => {
@@ -37,13 +41,24 @@ export default function TodayScreen() {
     useCallback(() => {
       loadSettings();
       loadSchedules();
+      checkDeletedRoutines();
     }, [])
   );
+
+  const checkDeletedRoutines = async () => {
+    try {
+      const deleted = await RoutineService.getDeletedRoutinesForDate(today);
+      setHasDeletedRoutines(deleted.length > 0);
+    } catch (error) {
+      console.error('Failed to check deleted routines:', error);
+    }
+  };
 
   const loadSchedules = async () => {
     try {
       const data = await ScheduleService.getSchedulesForDate(today);
       setSchedules(data);
+      checkDeletedRoutines();
     } catch (error) {
       console.error('Failed to load schedules:', error);
     }
@@ -159,6 +174,14 @@ export default function TodayScreen() {
           <View style={styles.headerRow}>
             <Text style={styles.sectionTitle}>오늘의 일정</Text>
             <View style={styles.headerButtons}>
+              {hasDeletedRoutines && (
+                <TouchableOpacity 
+                  style={styles.restoreHeaderButton}
+                  onPress={() => setRestoreVisible(true)}
+                >
+                  <RotateCcw color={COLORS.primary} size={20} />
+                </TouchableOpacity>
+              )}
               <TouchableOpacity 
                 style={styles.settingsButton}
                 onPress={toggleClock}
@@ -242,6 +265,15 @@ export default function TodayScreen() {
         onDelete={handleDeleteSchedule}
         onEdit={handleEditSchedule}
       />
+
+      <RestoreRoutineModal
+        visible={restoreVisible}
+        onClose={() => setRestoreVisible(false)}
+        date={today}
+        onRestored={() => {
+          loadSchedules();
+        }}
+      />
     </View>
   );
 }
@@ -277,6 +309,14 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     padding: SPACING.xs,
+  },
+  restoreHeaderButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addButton: {
     width: 36,

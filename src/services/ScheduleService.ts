@@ -301,4 +301,26 @@ export class ScheduleService {
 
     return { hasOverlap: false };
   }
+
+  /**
+   * Checks if a deleted routine conflicts with existing items if restored
+   */
+  static async checkConflictForRestore(templateId: string, date: string) {
+    const db = await this.getDb();
+    
+    // 1. Get the routine version for this date to know its time
+    const version = await db.getFirstAsync<{ start_time: string, end_time: string, title: string }>(
+      `SELECT start_time, end_time, title FROM routine_content_history 
+       WHERE template_id = ? AND start_date <= ? 
+       ORDER BY start_date DESC LIMIT 1`,
+      [templateId, date]
+    );
+
+    if (!version) return { hasOverlap: false };
+
+    // 2. Use checkOverlap to see if this time slot is free
+    // Since it's currently deleted (in routine_exceptions), checkOverlap will consider it a conflict
+    // if there's anything else in that slot.
+    return await this.checkOverlap(date, version.start_time, version.end_time);
+  }
 }

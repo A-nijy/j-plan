@@ -257,4 +257,57 @@ export class RoutineService {
 
     return result;
   }
+
+  /**
+   * Returns routines that were deleted specifically for this date
+   */
+  static async getDeletedRoutinesForDate(date: string) {
+    const db = await this.getDb();
+    const dayOfWeek = new Date(date).getDay();
+
+    // 1. Get all routines that were "deleted" for this date
+    const deletedExceptions = await db.getAllAsync<{ routine_template_id: string }>(
+      'SELECT routine_template_id FROM routine_exceptions WHERE exception_date = ? AND is_deleted = 1',
+      [date]
+    );
+
+    const result: any[] = [];
+    for (const ex of deletedExceptions) {
+      // 2. Find the version of this routine for the given date
+      const version = await db.getFirstAsync<any>(
+        `SELECT * FROM routine_content_history 
+         WHERE template_id = ? AND start_date <= ? 
+         ORDER BY start_date DESC LIMIT 1`,
+        [ex.routine_template_id, date]
+      );
+
+      if (version) {
+        // 3. Double check if it would have been active on this day of week
+        const daysArray = (version.days_of_week || '').split(',').filter((d: string) => d !== '').map(Number);
+        if (daysArray.includes(dayOfWeek)) {
+          result.push({
+            id: version.template_id,
+            title: version.title,
+            description: version.description,
+            start_time: version.start_time || '09:00',
+            end_time: version.end_time || '10:00',
+            color: version.color || '#A0C4FF',
+          });
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Restores a routine that was deleted for a specific date
+   */
+  static async restoreRoutineForDate(templateId: string, date: string) {
+    const db = await this.getDb();
+    await db.runAsync(
+      'DELETE FROM routine_exceptions WHERE routine_template_id = ? AND exception_date = ? AND is_deleted = 1',
+      [templateId, date]
+    );
+  }
 }
