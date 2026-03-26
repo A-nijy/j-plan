@@ -170,17 +170,39 @@ export class TodoService {
     const db = await this.getDb();
     const now = new Date().toISOString();
     
+    // Check if this todo has ANY history yet. 
+    // If not, we MUST save the CURRENT content as the "original" history starting from its creation date.
+    const hasHistory = await db.getFirstAsync<{ id: string }>(
+      'SELECT id FROM todo_content_history WHERE todo_id = ? LIMIT 1',
+      [id]
+    );
+
+    if (!hasHistory) {
+      const todo = await db.getFirstAsync<{ content: string, created_at: string }>(
+        'SELECT content, created_at FROM todos WHERE id = ?',
+        [id]
+      );
+      if (todo) {
+        const originalStartDate = todo.created_at.split(' ')[0];
+        await db.runAsync(
+          `INSERT INTO todo_content_history (id, todo_id, content, start_date, created_at)
+           VALUES (?, ?, ?, ?, ?)`,
+          [`init_${id}`, id, todo.content, originalStartDate, todo.created_at]
+        );
+      }
+    }
+
     // Insert into content history for versioning
     // If there's already an entry for this exact start_date, update it instead of creating new
-    const existing = await db.getFirstAsync<{ id: string }>(
+    const existingAtDate = await db.getFirstAsync<{ id: string }>(
       'SELECT id FROM todo_content_history WHERE todo_id = ? AND start_date = ?',
       [id, date]
     );
 
-    if (existing) {
+    if (existingAtDate) {
       await db.runAsync(
         'UPDATE todo_content_history SET content = ? WHERE id = ?',
-        [content, existing.id]
+        [content, existingAtDate.id]
       );
     } else {
       await db.runAsync(

@@ -155,6 +155,27 @@ export const initDatabase = async () => {
       await db.runAsync('INSERT INTO weekly_settings (id, view_mode, grid_interval, start_hour, end_hour) VALUES ("default", "combined", 60, 0, 23)');
     }
 
+    // Migration: Ensure all todos have at least one entry in todo_content_history for their creation date
+    const allHabits = await db.getAllAsync<{ id: string, content: string, created_at: string }>(
+      'SELECT id, content, created_at FROM todos WHERE type = "habit"'
+    );
+
+    for (const todo of allHabits) {
+      const startDate = todo.created_at.split(' ')[0]; // YYYY-MM-DD
+      const hasInitialHistory = await db.getFirstAsync<{ id: string }>(
+        'SELECT id FROM todo_content_history WHERE todo_id = ? AND start_date <= ?',
+        [todo.id, startDate]
+      );
+
+      if (!hasInitialHistory) {
+        await db.runAsync(
+          `INSERT INTO todo_content_history (id, todo_id, content, start_date, created_at)
+           VALUES (?, ?, ?, ?, ?)`,
+          [`init_${todo.id}`, todo.id, todo.content, startDate, todo.created_at]
+        );
+      }
+    }
+
     console.log('Database tables initialized');
     return db;
   } catch (error) {
