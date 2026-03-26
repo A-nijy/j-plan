@@ -140,7 +140,7 @@ export const CircularClock: React.FC<CircularClockProps> = ({ data = [], progres
                   <SvgText
                     x={CENTER}
                     y={CENTER - RADIUS / 2}
-                    fill="white"
+                    fill="#000000"
                     fontSize="11"
                     fontWeight="700"
                     textAnchor="middle"
@@ -163,7 +163,7 @@ export const CircularClock: React.FC<CircularClockProps> = ({ data = [], progres
                     key={lIdx}
                     x={labelInfo.pos.x}
                     y={labelInfo.pos.y + (lIdx * 10) - (labelInfo.lines.length > 1 ? 2 : -4)}
-                    fill="white"
+                    fill="#000000"
                     fontSize="9"
                     fontWeight="600"
                     textAnchor="middle"

@@ -128,6 +128,36 @@ export const initDatabase = async () => {
       );
     `);
 
+    // Routine Content History Table (Versioning)
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS routine_content_history (
+        id TEXT PRIMARY KEY NOT NULL,
+        template_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        start_time TEXT,
+        end_time TEXT,
+        color TEXT,
+        days_of_week TEXT,
+        start_date TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Migration for routine_content_history (Expand for existing tables)
+    try {
+      await db.execAsync("ALTER TABLE routine_content_history ADD COLUMN start_time TEXT;");
+    } catch (e) { /* Column might already exist */ }
+    try {
+      await db.execAsync("ALTER TABLE routine_content_history ADD COLUMN end_time TEXT;");
+    } catch (e) { /* Column might already exist */ }
+    try {
+      await db.execAsync("ALTER TABLE routine_content_history ADD COLUMN color TEXT;");
+    } catch (e) { /* Column might already exist */ }
+    try {
+      await db.execAsync("ALTER TABLE routine_content_history ADD COLUMN days_of_week TEXT;");
+    } catch (e) { /* Column might already exist */ }
+
     // Routine Exceptions Table (Specific dates to hide or mark completed a routine)
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS routine_exceptions (
@@ -172,6 +202,45 @@ export const initDatabase = async () => {
           `INSERT INTO todo_content_history (id, todo_id, content, start_date, created_at)
            VALUES (?, ?, ?, ?, ?)`,
           [`init_${todo.id}`, todo.id, todo.content, startDate, todo.created_at]
+        );
+      }
+    }
+
+    // Migration: Ensure all routine templates have at least one entry in routine_content_history for their creation date
+    const allRoutines = await db.getAllAsync<{ id: string, title: string, description: string, start_time: string, end_time: string, color: string, created_at: string }>(
+      'SELECT id, title, description, start_time, end_time, color, created_at FROM routine_templates'
+    );
+
+    for (const routine of allRoutines) {
+      const startDate = routine.created_at.split(' ')[0]; // YYYY-MM-DD
+      const hasInitialHistory = await db.getFirstAsync<{ id: string, start_time: string }>(
+        'SELECT id, start_time FROM routine_content_history WHERE template_id = ? AND start_date <= ?',
+        [routine.id, startDate]
+      );
+
+      // Fetch days_of_week for this template
+      const configs = await db.getAllAsync<{ day_of_week: number }>(
+        'SELECT day_of_week FROM routine_configs WHERE template_id = ?',
+        [routine.id]
+      );
+      const daysOfWeek = configs.map(c => c.day_of_week).join(',');
+
+      if (!hasInitialHistory) {
+        await db.runAsync(
+          `INSERT INTO routine_content_history (id, template_id, title, description, start_time, end_time, color, days_of_week, start_date, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [`init_${routine.id}`, routine.id, routine.title, routine.description || null, routine.start_time, routine.end_time, routine.color, daysOfWeek, startDate, routine.created_at]
+        );
+      } else {
+        // Expand existing partial history if any columns are missing (null)
+        await db.runAsync(
+          `UPDATE routine_content_history 
+           SET start_time = COALESCE(start_time, ?), 
+               end_time = COALESCE(end_time, ?), 
+               color = COALESCE(color, ?), 
+               days_of_week = COALESCE(days_of_week, ?)
+           WHERE id = ?`,
+          [routine.start_time, routine.end_time, routine.color, daysOfWeek, hasInitialHistory.id]
         );
       }
     }
