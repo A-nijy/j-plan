@@ -7,12 +7,16 @@ import { CheckCircle2, Circle, Plus, ChevronLeft, ChevronRight, Calendar as Cale
 import { format, addDays, subDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import AddTodoModal from '../../src/components/AddTodoModal';
+import HabitHistoryModal from '../../src/components/HabitHistoryModal';
+import { Flame } from 'lucide-react-native';
 
 export default function TodoScreen() {
   const [tab, setTab] = useState<'habit' | 'daily'>('habit');
-  const [todos, setTodos] = useState<Todo[]>([]);
+  const [todos, setTodos] = useState<any[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTodo, setEditingTodo] = useState<{ id: string; content: string } | undefined>(undefined);
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [selectedHistoryTodo, setSelectedHistoryTodo] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -37,8 +41,8 @@ export default function TodoScreen() {
   const handleSaveTodo = async (todoData: any) => {
     try {
       if (todoData.id) {
-        // Edit mode
-        await TodoService.updateTodo(todoData.id, todoData.content);
+        // Edit mode - versioned by current selected date
+        await TodoService.updateTodo(todoData.id, todoData.content, dateStr);
       } else {
         // Add mode
         await TodoService.createTodo({
@@ -89,20 +93,35 @@ export default function TodoScreen() {
     );
   };
 
-  const renderItem = ({ item }: { item: Todo }) => (
+  const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
       style={styles.todoItem} 
       onPress={() => handleToggle(item.id, item.is_completed)}
       onLongPress={() => handleLongPress(item)}
     >
-      {item.is_completed === 1 ? (
-        <CheckCircle2 color={COLORS.primary} size={24} />
-      ) : (
-        <Circle color={COLORS.textSecondary} size={24} />
+      <View style={styles.todoLeft}>
+        {item.is_completed === 1 ? (
+          <CheckCircle2 color={COLORS.primary} size={24} />
+        ) : (
+          <Circle color={COLORS.textSecondary} size={24} />
+        )}
+        <Text style={[styles.todoText, item.is_completed === 1 && styles.completedText]}>
+          {item.content}
+        </Text>
+      </View>
+
+      {tab === 'habit' && (
+        <TouchableOpacity 
+          style={styles.streakBadge}
+          onPress={() => {
+            setSelectedHistoryTodo(item);
+            setHistoryModalVisible(true);
+          }}
+        >
+          <Flame size={14} color={item.streak > 0 ? '#FF8B3D' : COLORS.textSecondary} style={{ marginRight: 2 }} />
+          <Text style={[styles.streakText, item.streak > 0 && { color: '#FF8B3D' }]}>{item.streak}</Text>
+        </TouchableOpacity>
       )}
-      <Text style={[styles.todoText, item.is_completed === 1 && styles.completedText]}>
-        {item.content}
-      </Text>
     </TouchableOpacity>
   );
 
@@ -190,6 +209,17 @@ export default function TodoScreen() {
         }}
         onSave={handleSaveTodo}
       />
+
+      {selectedHistoryTodo && (
+        <HabitHistoryModal
+          visible={historyModalVisible}
+          todo={selectedHistoryTodo}
+          onClose={() => {
+            setHistoryModalVisible(false);
+            setSelectedHistoryTodo(null);
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -292,6 +322,7 @@ const styles = StyleSheet.create({
   todoItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: COLORS.surface,
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
@@ -302,10 +333,32 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
+  todoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
   todoText: {
     marginLeft: SPACING.md,
     fontSize: 16,
     color: COLORS.text,
+    flex: 1,
+  },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  streakText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: COLORS.textSecondary,
   },
   completedText: {
     textDecorationLine: 'line-through',

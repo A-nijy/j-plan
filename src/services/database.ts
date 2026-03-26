@@ -71,7 +71,7 @@ export const initDatabase = async () => {
       );
     `);
 
-    // Todo Completions Table (New)
+    // Todo Exceptions/History/Completions Table (New)
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS todo_completions (
         id TEXT PRIMARY KEY NOT NULL,
@@ -81,6 +81,17 @@ export const initDatabase = async () => {
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(todo_id, completed_date)
+      );
+    `);
+
+    // Todo Content History Table (Versioning)
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS todo_content_history (
+        id TEXT PRIMARY KEY NOT NULL,
+        todo_id TEXT NOT NULL,
+        content TEXT NOT NULL,
+        start_date TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
