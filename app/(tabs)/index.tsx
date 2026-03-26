@@ -58,6 +58,20 @@ export default function TodayScreen() {
     target_date: string;
   }) => {
     try {
+      // If we are editing (initialValues present)
+      if (initialValues?.id) {
+        if (initialValues.is_routine) {
+          // Change Routine Only Today: 
+          // 1. Exclude old routine for today
+          const templateId = initialValues.id.split('::')[1];
+          await ScheduleService.excludeRoutineFromDate(templateId, today);
+          // 2. Create new regular schedule (below)
+        } else {
+          // Regular schedule edit: Delete old one first
+          await ScheduleService.deleteScheduleAtDate(initialValues.id);
+        }
+      }
+
       await ScheduleService.createSchedule(newSchedule);
       setModalVisible(false);
       setInitialValues(null);
@@ -65,6 +79,20 @@ export default function TodayScreen() {
     } catch (error) {
       Alert.alert('오류', '일정을 저장하지 못했습니다.');
     }
+  };
+
+  const handleEditSchedule = (schedule: Schedule) => {
+    setDetailVisible(false);
+    setInitialValues({
+      id: schedule.id,
+      title: schedule.title,
+      description: schedule.description || '',
+      start_time: schedule.start_time,
+      end_time: schedule.end_time,
+      color: schedule.color,
+      is_routine: schedule.is_routine,
+    });
+    setModalVisible(true);
   };
 
   const handlePressSchedule = (schedule: Schedule) => {
@@ -212,6 +240,7 @@ export default function TodayScreen() {
         onClose={() => setDetailVisible(false)}
         schedule={selectedSchedule}
         onDelete={handleDeleteSchedule}
+        onEdit={handleEditSchedule}
       />
     </View>
   );

@@ -26,11 +26,13 @@ interface AddScheduleModalProps {
   initialDate?: string; // YYYY-MM-DD
   showDatePicker?: boolean;
   initialValues?: {
+    id?: string;
     title?: string;
     description?: string;
     start_time?: string;
     end_time?: string;
     color?: string;
+    is_routine?: boolean;
   };
 }
 
@@ -235,7 +237,9 @@ export default function AddScheduleModal({
       <View style={styles.modalOverlay}>
         <View style={[styles.modalContent, { paddingBottom: insets.bottom + SPACING.lg }]}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>새 일정 추가</Text>
+            <Text style={styles.headerTitle}>
+              {initialValues?.id ? (initialValues.is_routine ? '오늘만 변경' : '일정 수정') : '새 일정 추가'}
+            </Text>
             <TouchableOpacity onPress={onClose}>
               <X color={COLORS.text} size={24} />
             </TouchableOpacity>
@@ -318,7 +322,9 @@ export default function AddScheduleModal({
           </ScrollView>
 
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>일정 저장</Text>
+            <Text style={styles.saveButtonText}>
+              {initialValues?.id ? '변경 완료' : '일정 저장'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>

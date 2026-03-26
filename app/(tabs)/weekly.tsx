@@ -64,6 +64,20 @@ export default function WeeklyScreen() {
     target_date: string;
   }) => {
     try {
+      // If we are editing (initialValues present)
+      if (initialValues?.id) {
+        if (initialValues.is_routine) {
+          // Change Routine Only for that date:
+          // 1. Exclude old routine for the target date
+          const templateId = initialValues.id.split('::')[1];
+          await ScheduleService.excludeRoutineFromDate(templateId, newSchedule.target_date);
+          // 2. Create new regular schedule (below)
+        } else {
+          // Regular schedule edit: Delete old one first
+          await ScheduleService.deleteScheduleAtDate(initialValues.id);
+        }
+      }
+
       await ScheduleService.createSchedule(newSchedule);
       setModalVisible(false);
       setInitialValues(null);
@@ -71,6 +85,20 @@ export default function WeeklyScreen() {
     } catch (error) {
       Alert.alert('오류', '일정을 저장하지 못했습니다.');
     }
+  };
+
+  const handleEditSchedule = (schedule: Schedule) => {
+    setDetailVisible(false);
+    setInitialValues({
+      id: schedule.id,
+      title: schedule.title,
+      description: schedule.description || '',
+      start_time: schedule.start_time,
+      end_time: schedule.end_time,
+      color: schedule.color,
+      is_routine: schedule.is_routine,
+    });
+    setModalVisible(true);
   };
 
   const handlePressSchedule = (schedule: Schedule) => {
@@ -220,6 +248,7 @@ export default function WeeklyScreen() {
         onClose={() => setDetailVisible(false)}
         schedule={selectedSchedule}
         onDelete={handleDeleteSchedule}
+        onEdit={handleEditSchedule}
       />
     </View>
   );

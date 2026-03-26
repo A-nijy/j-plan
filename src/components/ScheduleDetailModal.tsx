@@ -2,13 +2,14 @@ import React from 'react';
 import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback, Alert } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { Schedule } from '../types';
-import { X, Calendar, Clock, AlignLeft, Trash2 } from 'lucide-react-native';
+import { X, Calendar, Clock, AlignLeft, Trash2, Edit2 } from 'lucide-react-native';
 
 interface ScheduleDetailModalProps {
   visible: boolean;
   onClose: () => void;
   schedule: Schedule | null;
   onDelete: (schedule: Schedule) => void;
+  onEdit: (schedule: Schedule) => void;
 }
 
 export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
@@ -16,6 +17,7 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
   onClose,
   schedule,
   onDelete,
+  onEdit,
 }) => {
   if (!schedule) return null;
 
@@ -84,12 +86,22 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
 
               <View style={styles.footer}>
                 <TouchableOpacity 
+                  style={styles.editButton}
+                  onPress={() => onEdit(schedule)}
+                >
+                  <Edit2 size={16} color="white" style={{ marginRight: 6 }} />
+                  <Text style={styles.editButtonText}>
+                    {schedule.is_routine ? '오늘만 변경' : '일정 변경'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
                   style={styles.deleteButton}
                   onPress={handleDeletePress}
                 >
                   <Trash2 size={16} color={COLORS.error} style={{ marginRight: 6 }} />
                   <Text style={styles.deleteButtonText}>
-                    {schedule.is_routine ? '루틴 오늘만 삭제' : '일정 삭제'}
+                    {schedule.is_routine ? '오늘만 삭제' : '일정 삭제'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -167,24 +179,39 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   footer: {
+    flexDirection: 'row',
     padding: SPACING.lg,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  editButton: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 10,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   deleteButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: SPACING.sm + 2,
-    paddingHorizontal: SPACING.xl,
+    paddingVertical: 10,
     borderRadius: BORDER_RADIUS.md,
     backgroundColor: COLORS.error + '10',
-    width: '100%',
   },
   deleteButtonText: {
     color: COLORS.error,
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
 });
