@@ -64,6 +64,11 @@ export default function HabitHistoryModal({ visible, onClose, todo }: HabitHisto
     return historyData.completions.includes(date);
   };
 
+  const getStartDate = () => {
+    if (!historyData || historyData.contentHistory.length === 0) return null;
+    return historyData.contentHistory[0].start_date;
+  };
+
   const renderCalendar = () => {
     const startDay = getDay(startOfMonth(currentMonth));
     const blanks = Array(startDay).fill(null);
@@ -129,6 +134,8 @@ export default function HabitHistoryModal({ visible, onClose, todo }: HabitHisto
   };
 
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+  const startDate = getStartDate();
+  const isBeforeStart = startDate && selectedDateStr < startDate;
   const activeContent = getDayContent(selectedDateStr);
 
   return (
@@ -158,7 +165,11 @@ export default function HabitHistoryModal({ visible, onClose, todo }: HabitHisto
                   <Text style={styles.detailDate}>
                     {format(selectedDate, 'M월 d일 (E)', { locale: ko })}
                   </Text>
-                  {isCompletedDay(selectedDateStr) ? (
+                  {isBeforeStart ? (
+                    <View style={styles.beforeStartBadge}>
+                      <Text style={styles.beforeStartText}>시작 전</Text>
+                    </View>
+                  ) : isCompletedDay(selectedDateStr) ? (
                     <View style={styles.statusBadge}>
                       <Text style={styles.statusText}>달성</Text>
                     </View>
@@ -167,16 +178,26 @@ export default function HabitHistoryModal({ visible, onClose, todo }: HabitHisto
                   )}
                 </View>
                 
-                <View style={styles.contentWrap}>
-                  <Text style={styles.contentLabel}>당시 기록 내용</Text>
-                  <Text style={styles.activeContentText}>{activeContent}</Text>
-                </View>
-
-                {isContentChangedDay(selectedDateStr) && (
-                  <View style={styles.changeNotice}>
-                    <Edit3 size={14} color={COLORS.primary} />
-                    <Text style={styles.changeNoticeText}>이 날짜에 투두 내용이 수정되었습니다.</Text>
+                {isBeforeStart ? (
+                  <View style={styles.contentWrap}>
+                    <Text style={[styles.activeContentText, { color: COLORS.textSecondary, fontStyle: 'italic' }]}>
+                      해당 습관이 시작되기 전입니다.
+                    </Text>
                   </View>
+                ) : (
+                  <>
+                    <View style={styles.contentWrap}>
+                      <Text style={styles.contentLabel}>당시 기록 내용</Text>
+                      <Text style={styles.activeContentText}>{activeContent}</Text>
+                    </View>
+
+                    {isContentChangedDay(selectedDateStr) && (
+                      <View style={styles.changeNotice}>
+                        <Edit3 size={14} color={COLORS.primary} />
+                        <Text style={styles.changeNoticeText}>이 날짜에 투두 내용이 수정되었습니다.</Text>
+                      </View>
+                    )}
+                  </>
                 )}
               </View>
 
@@ -344,6 +365,17 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     color: COLORS.primary,
+    fontWeight: 'bold',
+  },
+  beforeStartBadge: {
+    backgroundColor: COLORS.border + '50',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  beforeStartText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
     fontWeight: 'bold',
   },
   uncompletedText: {
