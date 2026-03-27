@@ -85,7 +85,13 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
               </ScrollView>
 
               <View style={styles.footer}>
-                {!schedule.is_routine && (
+                {schedule.is_routine ? (
+                  <View style={styles.routineNotice}>
+                    <Text style={styles.routineNoticeText}>
+                      루틴 일정은 특정 날짜만 변경이 불가합니다.
+                    </Text>
+                  </View>
+                ) : (
                   <TouchableOpacity 
                     style={styles.editButton}
                     onPress={() => onEdit(schedule)}
@@ -94,16 +100,6 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
                     <Text style={styles.editButtonText}>일정 변경</Text>
                   </TouchableOpacity>
                 )}
-
-                <TouchableOpacity 
-                  style={styles.deleteButton}
-                  onPress={handleDeletePress}
-                >
-                  <Trash2 size={16} color={COLORS.error} style={{ marginRight: 6 }} />
-                  <Text style={styles.deleteButtonText}>
-                    {schedule.is_routine ? '오늘만 삭제' : '일정 삭제'}
-                  </Text>
-                </TouchableOpacity>
               </View>
             </View>
           </TouchableWithoutFeedback>
@@ -200,18 +196,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
   },
-  deleteButton: {
+  routineNotice: {
     flex: 1,
-    flexDirection: 'row',
+    paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    backgroundColor: COLORS.background,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.error + '10',
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  deleteButtonText: {
-    color: COLORS.error,
-    fontWeight: 'bold',
-    fontSize: 14,
+  routineNoticeText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    fontStyle: 'italic',
   },
 });

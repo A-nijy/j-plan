@@ -14,9 +14,10 @@ interface HabitHistoryModalProps {
     id: string;
     content: string;
   };
+  onEdit: (id: string, content: string) => void;
 }
 
-export default function HabitHistoryModal({ visible, onClose, todo }: HabitHistoryModalProps) {
+export default function HabitHistoryModal({ visible, onClose, todo, onEdit }: HabitHistoryModalProps) {
   const insets = useSafeAreaInsets();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -210,6 +211,19 @@ export default function HabitHistoryModal({ visible, onClose, todo }: HabitHisto
                   <Edit3 size={12} color={COLORS.primary} />
                   <Text style={styles.legendText}>내용 수정일</Text>
                 </View>
+              </View>
+
+              <View style={styles.footer}>
+                <TouchableOpacity 
+                   style={styles.editButton}
+                   onPress={() => {
+                     onEdit(todo.id, todo.content);
+                     onClose();
+                   }}
+                >
+                  <Edit3 size={16} color="white" style={{ marginRight: 6 }} />
+                  <Text style={styles.editButtonText}>습관 변경</Text>
+                </TouchableOpacity>
               </View>
             </ScrollView>
           )}
@@ -422,5 +436,29 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontSize: 12,
     color: COLORS.textSecondary,
+  },
+  footer: {
+    marginTop: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingTop: SPACING.md,
+  },
+  editButton: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  editButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
 });

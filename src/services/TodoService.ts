@@ -14,10 +14,17 @@ export class TodoService {
     const now = new Date().toISOString();
     const today = now.split('T')[0];
     
+    // Get current max order
+    const maxOrderRes = await db.getFirstAsync<{ max_order: number }>(
+      'SELECT MAX(item_order) as max_order FROM todos WHERE type = ?',
+      [todo.type]
+    );
+    const nextOrder = (maxOrderRes?.max_order || 0) + 1;
+
     await db.runAsync(
-      `INSERT INTO todos (id, content, is_completed, type, target_date, habit_days, created_at, updated_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, todo.content, todo.is_completed, todo.type, todo.target_date || null, todo.habit_days || null, now, now]
+      `INSERT INTO todos (id, content, is_completed, type, target_date, habit_days, item_order, created_at, updated_at) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, todo.content, todo.is_completed, todo.type, todo.target_date || null, todo.habit_days || null, nextOrder, now, now]
     );
 
     // Initial content history
@@ -42,7 +49,8 @@ export class TodoService {
          LEFT JOIN todo_completions tc ON t.id = tc.todo_id AND tc.completed_date = ?
          WHERE t.type = 'habit' 
          AND t.is_deleted = 0
-         AND (DATE(t.created_at) <= DATE(?))`,
+         AND (DATE(t.created_at) <= DATE(?))
+         ORDER BY t.item_order ASC`,
         [date, date]
       );
 
@@ -71,7 +79,8 @@ export class TodoService {
         `SELECT t.*, COALESCE(tc.status, 0) as is_completed 
          FROM todos t 
          LEFT JOIN todo_completions tc ON t.id = tc.todo_id AND tc.completed_date = ?
-         WHERE t.type = 'daily' AND t.target_date = ? AND t.is_deleted = 0`,
+         WHERE t.type = 'daily' AND t.target_date = ? AND t.is_deleted = 0
+         ORDER BY t.item_order ASC`,
         [date, date]
       );
     }
@@ -217,5 +226,17 @@ export class TodoService {
       'UPDATE todos SET content = ?, updated_at = ? WHERE id = ?',
       [content, now, id]
     );
+  }
+
+  static async updateTodoOrder(orderedIds: string[]) {
+    const db = await this.getDb();
+    await db.withTransactionAsync(async () => {
+      for (let i = 0; i < orderedIds.length; i++) {
+        await db.runAsync(
+          'UPDATE todos SET item_order = ? WHERE id = ?',
+          [i, orderedIds[i]]
+        );
+      }
+    });
   }
 }

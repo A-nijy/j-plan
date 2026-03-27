@@ -7,6 +7,9 @@ import { RoutineService } from '../../src/services/RoutineService';
 import { RoutineTemplate } from '../../src/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AddRoutineModal from '../../src/components/AddRoutineModal';
+import SwipeableRow from '../../src/components/common/SwipeableRow';
+import OnboardingTooltip from '../../src/components/common/OnboardingTooltip';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -17,6 +20,7 @@ export default function RoutineScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<(RoutineTemplate & { days: number[] }) | null>(null);
   const [selectedFilterDay, setSelectedFilterDay] = useState<number>(-1); // -1 for All
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -33,6 +37,12 @@ export default function RoutineScreen() {
       enrichedTemplates.sort((a, b) => a.start_time.localeCompare(b.start_time));
       
       setTemplates(enrichedTemplates);
+      
+      // Handle tooltip
+      if (enrichedTemplates.length > 0) {
+        const seen = await AsyncStorage.getItem('tooltip_seen_swipe');
+        if (!seen) setShowTooltip(true);
+      }
     } catch (error) {
       console.error('Failed to fetch templates:', error);
     } finally {
@@ -96,55 +106,58 @@ export default function RoutineScreen() {
   };
 
   const renderTemplateItem = ({ item }: { item: RoutineTemplate & { days: number[] } }) => (
-    <TouchableOpacity 
-      style={styles.templateCard} 
+    <SwipeableRow
+      onDelete={() => handleDeleteTemplate(item.id, item.title)}
       onPress={() => {
         setEditingTemplate(item);
         setModalVisible(true);
       }}
     >
-      <View style={[styles.colorBar, { backgroundColor: item.color }]} />
-      <View style={styles.cardContent}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.templateTitle}>{item.title}</Text>
-          <View style={styles.actionButtons}>
-            <TouchableOpacity onPress={() => handleDeleteTemplate(item.id, item.title)}>
-              <Trash2 size={18} color={COLORS.error} />
-            </TouchableOpacity>
+      <View style={[styles.templateCard, { marginBottom: 0 }]}>
+        <View style={[styles.colorBar, { backgroundColor: item.color }]} />
+        <View style={styles.cardContent}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.templateTitle}>{item.title}</Text>
           </View>
-        </View>
-        
-        <View style={styles.cardDetails}>
-          <View style={styles.detailItem}>
-            <ClockIcon size={14} color={COLORS.textSecondary} />
-            <Text style={styles.detailText}>{item.start_time} - {item.end_time}</Text>
+          
+          <View style={styles.cardDetails}>
+            <View style={styles.detailItem}>
+              <ClockIcon size={14} color={COLORS.textSecondary} />
+              <Text style={styles.detailText}>{item.start_time} - {item.end_time}</Text>
+            </View>
           </View>
-        </View>
 
-        <View style={styles.daysRow}>
-          {DAY_LABELS.map((label, idx) => {
-            const isActive = item.days.includes(idx);
-            return (
-              <View 
-                key={idx} 
-                style={[
-                  styles.dayBadge, 
-                  isActive && { backgroundColor: item.color + '30', borderColor: item.color }
-                ]}
-              >
-                <Text style={[styles.dayBadgeText, isActive && { color: COLORS.text, fontWeight: 'bold' }]}>
-                  {label}
-                </Text>
-              </View>
-            );
-          })}
+          <View style={styles.daysRow}>
+            {DAY_LABELS.map((label, idx) => {
+              const isActive = item.days.includes(idx);
+              return (
+                <View 
+                  key={idx} 
+                  style={[
+                    styles.dayBadge, 
+                    isActive && { backgroundColor: item.color + '30', borderColor: item.color }
+                  ]}
+                >
+                  <Text style={[styles.dayBadgeText, isActive && { color: COLORS.text, fontWeight: 'bold' }]}>
+                    {label}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
         </View>
       </View>
-    </TouchableOpacity>
+      <View style={{ height: SPACING.md }} />
+    </SwipeableRow>
   );
 
   return (
     <View style={styles.container}>
+      <OnboardingTooltip 
+        type="swipe" 
+        visible={showTooltip} 
+        onClose={() => setShowTooltip(false)} 
+      />
       <View style={styles.filterBar}>
         <ScrollView 
           horizontal 

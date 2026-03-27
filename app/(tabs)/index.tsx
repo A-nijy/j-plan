@@ -14,6 +14,9 @@ import { ScheduleDetailModal } from '../../src/components/ScheduleDetailModal';
 import { RoutineService } from '../../src/services/RoutineService';
 import RestoreRoutineModal from '../../src/components/RestoreRoutineModal';
 import { SeedService } from '../../src/services/SeedService';
+import SwipeableRow from '../../src/components/common/SwipeableRow';
+import OnboardingTooltip from '../../src/components/common/OnboardingTooltip';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function TodayScreen() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -24,6 +27,7 @@ export default function TodayScreen() {
   const [detailVisible, setDetailVisible] = useState(false);
   const [restoreVisible, setRestoreVisible] = useState(false);
   const [hasDeletedRoutines, setHasDeletedRoutines] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
   const today = format(new Date(), 'yyyy-MM-dd');
 
   const loadSettings = async () => {
@@ -43,8 +47,17 @@ export default function TodayScreen() {
       loadSettings();
       loadSchedules();
       checkDeletedRoutines();
+      checkTooltip();
     }, [])
   );
+
+  const checkTooltip = async () => {
+    const seen = await AsyncStorage.getItem('tooltip_seen_swipe');
+    if (!seen) {
+      // Show tooltip if there's at least one item
+      // We'll trigger this inside loadSchedules after data is fetched
+    }
+  };
 
   const checkDeletedRoutines = async () => {
     try {
@@ -60,6 +73,12 @@ export default function TodayScreen() {
       const data = await ScheduleService.getSchedulesForDate(today);
       setSchedules(data);
       checkDeletedRoutines();
+      
+      // Handle tooltip visibility
+      if (data.length > 0) {
+        const seen = await AsyncStorage.getItem('tooltip_seen_swipe');
+        if (!seen) setShowTooltip(true);
+      }
     } catch (error) {
       console.error('Failed to load schedules:', error);
     }
@@ -164,6 +183,11 @@ export default function TodayScreen() {
 
   return (
     <View style={styles.container}>
+      <OnboardingTooltip 
+        type="swipe" 
+        visible={showTooltip} 
+        onClose={() => setShowTooltip(false)} 
+      />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {settings?.show_circular_clock === 1 && (
           <View style={styles.clockContainer}>
@@ -223,37 +247,40 @@ export default function TodayScreen() {
             </View>
           ) : (
             schedules.map((item) => (
-              <TouchableOpacity 
-                key={item.id} 
-                style={styles.scheduleItem}
+              <SwipeableRow
+                key={item.id}
+                onDelete={() => handleDeleteSchedule(item)}
                 onPress={() => handlePressSchedule(item)}
               >
-                <View style={[styles.colorBar, { backgroundColor: item.color }]} />
-                <View style={styles.scheduleCardContent}>
-                  <View style={styles.scheduleInfo}>
-                    <View style={styles.titleRow}>
-                      <Text style={[styles.scheduleTitle, item.is_completed && styles.completedText]}>
-                        {item.title}
+                <View style={[styles.scheduleItem, { marginBottom: 0 }]}>
+                  <View style={[styles.colorBar, { backgroundColor: item.color }]} />
+                  <View style={styles.scheduleCardContent}>
+                    <View style={styles.scheduleInfo}>
+                      <View style={styles.titleRow}>
+                        <Text style={[styles.scheduleTitle, item.is_completed && styles.completedText]}>
+                          {item.title}
+                        </Text>
+                        {item.is_routine && (
+                          <View style={styles.routineBadge}>
+                            <Text style={styles.routineBadgeText}>루틴</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={[styles.scheduleTime, item.is_completed && styles.completedText]}>
+                        {item.start_time} - {item.end_time}
                       </Text>
-                      {item.is_routine && (
-                        <View style={styles.routineBadge}>
-                          <Text style={styles.routineBadgeText}>루틴</Text>
-                        </View>
-                      )}
                     </View>
-                    <Text style={[styles.scheduleTime, item.is_completed && styles.completedText]}>
-                      {item.start_time} - {item.end_time}
-                    </Text>
+                    
+                    <TouchableOpacity 
+                      style={[styles.checkbox, item.is_completed && { backgroundColor: item.color, borderColor: item.color }]}
+                      onPress={() => toggleCompletion(item)}
+                    >
+                      {item.is_completed && <Check size={14} color="white" strokeWidth={3} />}
+                    </TouchableOpacity>
                   </View>
-                  
-                  <TouchableOpacity 
-                    style={[styles.checkbox, item.is_completed && { backgroundColor: item.color, borderColor: item.color }]}
-                    onPress={() => toggleCompletion(item)}
-                  >
-                    {item.is_completed && <Check size={14} color="white" strokeWidth={3} />}
-                  </TouchableOpacity>
                 </View>
-              </TouchableOpacity>
+                <View style={{ height: SPACING.sm }} />
+              </SwipeableRow>
             ))
           )}
         </View>

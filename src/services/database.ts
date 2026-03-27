@@ -52,11 +52,15 @@ export const initDatabase = async () => {
         type TEXT NOT NULL,
         target_date TEXT,
         habit_days TEXT,
+        item_order INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
         is_deleted INTEGER DEFAULT 0
       );
     `);
+    try {
+      await db.execAsync("ALTER TABLE todos ADD COLUMN item_order INTEGER DEFAULT 0;");
+    } catch (e) { /* Column might already exist */ }
 
     // Weekly Settings Table
     await db.execAsync(`

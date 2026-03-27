@@ -6,6 +6,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { initDatabase } from '../src/services/database';
 import { COLORS } from '../src/constants/theme';
 
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
 export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
 
@@ -17,8 +19,6 @@ export default function RootLayout() {
       })
       .catch(err => {
         console.error('Database initialization failed', err);
-        // Even if it fails, we might want to let the app try to run, 
-        // but for now, we just stay in loading or show error.
       });
   }, []);
 
@@ -31,11 +31,13 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -8,7 +8,12 @@ import { format, addDays, subDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import AddTodoModal from '../../src/components/AddTodoModal';
 import HabitHistoryModal from '../../src/components/HabitHistoryModal';
+import { TodoDetailModal } from '../../src/components/TodoDetailModal';
 import { Flame } from 'lucide-react-native';
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import SwipeableRow from '../../src/components/common/SwipeableRow';
+import OnboardingTooltip from '../../src/components/common/OnboardingTooltip';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function TodoScreen() {
   const [tab, setTab] = useState<'habit' | 'daily'>('habit');
@@ -17,7 +22,11 @@ export default function TodoScreen() {
   const [editingTodo, setEditingTodo] = useState<{ id: string; content: string } | undefined>(undefined);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
   const [selectedHistoryTodo, setSelectedHistoryTodo] = useState<any>(null);
+  const [selectedDetailTodo, setSelectedDetailTodo] = useState<any>(null);
+  const [detailVisible, setDetailVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showSwipeTooltip, setShowSwipeTooltip] = useState(false);
+  const [showDragTooltip, setShowDragTooltip] = useState(false);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
@@ -29,6 +38,13 @@ export default function TodoScreen() {
     try {
       const data = await TodoService.getTodos(tab, dateStr);
       setTodos(data);
+      
+      if (data.length > 0) {
+        const seenSwipe = await AsyncStorage.getItem('tooltip_seen_swipe');
+        const seenDrag = await AsyncStorage.getItem('tooltip_seen_drag');
+        if (!seenSwipe) setShowSwipeTooltip(true);
+        else if (!seenDrag) setShowDragTooltip(true);
+      }
     } catch (error) {
       console.error('Failed to load todos:', error);
     }
@@ -68,61 +84,63 @@ export default function TodoScreen() {
     }
   };
 
-  const handleLongPress = (item: Todo) => {
-    Alert.alert(
-      '할 일 관리',
-      `"${item.content}"`,
-      [
-        { text: '취소', style: 'cancel' },
-        { 
-          text: '수정', 
-          onPress: () => {
-            setEditingTodo({ id: item.id, content: item.content });
-            setModalVisible(true);
-          }
-        },
-        { 
-          text: '삭제', 
-          style: 'destructive',
-          onPress: async () => {
-            await TodoService.deleteTodo(item.id);
-            loadTodos();
-          }
-        },
-      ]
-    );
+  const handleDeleteTodo = async (id: string) => {
+    try {
+      await TodoService.deleteTodo(id);
+      loadTodos();
+    } catch (error) {
+      Alert.alert('오류', '삭제하지 못했습니다.');
+    }
   };
 
-  const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity 
-      style={styles.todoItem} 
-      onPress={() => handleToggle(item.id, item.is_completed)}
-      onLongPress={() => handleLongPress(item)}
-    >
-      <View style={styles.todoLeft}>
-        {item.is_completed === 1 ? (
-          <CheckCircle2 color={COLORS.primary} size={24} />
-        ) : (
-          <Circle color={COLORS.textSecondary} size={24} />
-        )}
-        <Text style={[styles.todoText, item.is_completed === 1 && styles.completedText]}>
-          {item.content}
-        </Text>
-      </View>
+  const handlePressItem = (item: any) => {
+    if (tab === 'habit') {
+      setSelectedHistoryTodo(item);
+      setHistoryModalVisible(true);
+    } else {
+      setSelectedDetailTodo(item);
+      setDetailVisible(true);
+    }
+  };
 
-      {tab === 'habit' && (
+  const renderItem = ({ item, drag, isActive }: RenderItemParams<any>) => (
+    <ScaleDecorator>
+      <SwipeableRow
+        onDelete={() => handleDeleteTodo(item.id)}
+        onPress={() => handlePressItem(item)}
+      >
         <TouchableOpacity 
-          style={styles.streakBadge}
-          onPress={() => {
-            setSelectedHistoryTodo(item);
-            setHistoryModalVisible(true);
-          }}
+          style={[
+            styles.todoItem, 
+            isActive && { backgroundColor: COLORS.background, elevation: 5 },
+            { marginBottom: 0 }
+          ]} 
+          onLongPress={drag}
+          delayLongPress={200}
         >
-          <Flame size={14} color={item.streak > 0 ? '#FF8B3D' : COLORS.textSecondary} style={{ marginRight: 2 }} />
-          <Text style={[styles.streakText, item.streak > 0 && { color: '#FF8B3D' }]}>{item.streak}</Text>
+          <View style={styles.todoLeft}>
+            <TouchableOpacity onPress={() => handleToggle(item.id, item.is_completed)}>
+              {item.is_completed === 1 ? (
+                <CheckCircle2 color={COLORS.primary} size={24} />
+              ) : (
+                <Circle color={COLORS.textSecondary} size={24} />
+              )}
+            </TouchableOpacity>
+            <Text style={[styles.todoText, item.is_completed === 1 && styles.completedText]}>
+              {item.content}
+            </Text>
+          </View>
+
+          {tab === 'habit' && (
+            <View style={styles.streakBadge}>
+              <Flame size={14} color={item.streak > 0 ? '#FF8B3D' : COLORS.textSecondary} style={{ marginRight: 2 }} />
+              <Text style={[styles.streakText, item.streak > 0 && { color: '#FF8B3D' }]}>{item.streak}</Text>
+            </View>
+          )}
         </TouchableOpacity>
-      )}
-    </TouchableOpacity>
+        <View style={{ height: SPACING.sm }} />
+      </SwipeableRow>
+    </ScaleDecorator>
   );
 
   const completedCount = todos.filter(t => t.is_completed === 1).length;
@@ -131,6 +149,16 @@ export default function TodoScreen() {
 
   return (
     <View style={styles.container}>
+      <OnboardingTooltip 
+        type="swipe" 
+        visible={showSwipeTooltip} 
+        onClose={() => setShowSwipeTooltip(false)} 
+      />
+      <OnboardingTooltip 
+        type="drag" 
+        visible={showDragTooltip} 
+        onClose={() => setShowDragTooltip(false)} 
+      />
       {/* Integrated Compact Header */}
       <View style={styles.controlRegion}>
         <View style={styles.headerTop}>
@@ -178,11 +206,15 @@ export default function TodoScreen() {
         </View>
       </View>
       
-      <FlatList
+      <DraggableFlatList
         data={todos}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
+        onDragEnd={({ data }) => {
+          setTodos(data);
+          TodoService.updateTodoOrder(data.map(d => d.id));
+        }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
@@ -218,6 +250,26 @@ export default function TodoScreen() {
             setHistoryModalVisible(false);
             setSelectedHistoryTodo(null);
           }}
+          onEdit={(id, content) => {
+            setEditingTodo({ id, content });
+            setModalVisible(true);
+          }}
+        />
+      )}
+
+      {selectedDetailTodo && (
+        <TodoDetailModal
+          visible={detailVisible}
+          todo={selectedDetailTodo}
+          onClose={() => {
+            setDetailVisible(false);
+            setSelectedDetailTodo(null);
+          }}
+          onEdit={(id, content) => {
+            setEditingTodo({ id, content });
+            setModalVisible(true);
+          }}
+          onToggle={handleToggle}
         />
       )}
     </View>
