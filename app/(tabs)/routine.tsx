@@ -106,49 +106,54 @@ export default function RoutineScreen() {
   };
 
   const renderTemplateItem = ({ item }: { item: RoutineTemplate & { days: number[] } }) => (
-    <SwipeableRow
-      onDelete={() => handleDeleteTemplate(item.id, item.title)}
-      onPress={() => {
-        setEditingTemplate(item);
-        setModalVisible(true);
-      }}
-    >
-      <View style={[styles.templateCard, { marginBottom: 0 }]}>
-        <View style={[styles.colorBar, { backgroundColor: item.color }]} />
-        <View style={styles.cardContent}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.templateTitle}>{item.title}</Text>
-          </View>
-          
-          <View style={styles.cardDetails}>
-            <View style={styles.detailItem}>
-              <ClockIcon size={14} color={COLORS.textSecondary} />
-              <Text style={styles.detailText}>{item.start_time} - {item.end_time}</Text>
+    <>
+      <SwipeableRow
+        onDelete={() => handleDeleteTemplate(item.id, item.title)}
+      >
+        <TouchableOpacity 
+          activeOpacity={0.7}
+          onPress={() => {
+            setEditingTemplate(item);
+            setModalVisible(true);
+          }}
+          style={[styles.templateCard, { marginBottom: 0 }]}
+        >
+          <View style={[styles.colorBar, { backgroundColor: item.color }]} />
+          <View style={styles.cardContent}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.templateTitle}>{item.title}</Text>
+            </View>
+            
+            <View style={styles.cardDetails}>
+              <View style={styles.detailItem}>
+                <ClockIcon size={14} color={COLORS.textSecondary} />
+                <Text style={styles.detailText}>{item.start_time} - {item.end_time}</Text>
+              </View>
+            </View>
+
+            <View style={styles.daysRow}>
+              {DAY_LABELS.map((label, idx) => {
+                const isActive = item.days.includes(idx);
+                return (
+                  <View 
+                    key={idx} 
+                    style={[
+                      styles.dayBadge, 
+                      isActive && { backgroundColor: item.color + '30', borderColor: item.color }
+                    ]}
+                  >
+                    <Text style={[styles.dayBadgeText, isActive && { color: COLORS.text, fontWeight: 'bold' }]}>
+                      {label}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
           </View>
-
-          <View style={styles.daysRow}>
-            {DAY_LABELS.map((label, idx) => {
-              const isActive = item.days.includes(idx);
-              return (
-                <View 
-                  key={idx} 
-                  style={[
-                    styles.dayBadge, 
-                    isActive && { backgroundColor: item.color + '30', borderColor: item.color }
-                  ]}
-                >
-                  <Text style={[styles.dayBadgeText, isActive && { color: COLORS.text, fontWeight: 'bold' }]}>
-                    {label}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      </View>
+        </TouchableOpacity>
+      </SwipeableRow>
       <View style={{ height: SPACING.md }} />
-    </SwipeableRow>
+    </>
   );
 
   return (
@@ -240,18 +245,11 @@ const styles = StyleSheet.create({
   },
   templateCard: {
     flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
-    marginBottom: SPACING.md,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   colorBar: {
     width: 6,
+    borderTopLeftRadius: BORDER_RADIUS.md - 1,
+    borderBottomLeftRadius: BORDER_RADIUS.md - 1,
   },
   cardContent: {
     flex: 1,

@@ -247,40 +247,46 @@ export default function TodayScreen() {
             </View>
           ) : (
             schedules.map((item) => (
-              <SwipeableRow
-                key={item.id}
-                onDelete={() => handleDeleteSchedule(item)}
-                onPress={() => handlePressSchedule(item)}
-              >
-                <View style={[styles.scheduleItem, { marginBottom: 0 }]}>
-                  <View style={[styles.colorBar, { backgroundColor: item.color }]} />
-                  <View style={styles.scheduleCardContent}>
-                    <View style={styles.scheduleInfo}>
-                      <View style={styles.titleRow}>
-                        <Text style={[styles.scheduleTitle, item.is_completed && styles.completedText]}>
-                          {item.title}
+              <React.Fragment key={item.id}>
+                <SwipeableRow
+                  onDelete={() => handleDeleteSchedule(item)}
+                  deleteText={item.is_routine ? "오늘만 삭제" : "삭제"}
+                  deleteConfirmMessage={item.is_routine ? "이 루틴은 오늘 일정에서만 삭제됩니다. 삭제하시겠습니까?" : "정말로 이 일정을 삭제하시겠습니까?"}
+                >
+                  <TouchableOpacity 
+                    activeOpacity={0.7} 
+                    onPress={() => handlePressSchedule(item)}
+                    style={[styles.scheduleItem, { marginBottom: 0 }]}
+                  >
+                    <View style={[styles.colorBar, { backgroundColor: item.color }]} />
+                    <View style={styles.scheduleCardContent}>
+                      <View style={styles.scheduleInfo}>
+                        <View style={styles.titleRow}>
+                          <Text style={[styles.scheduleTitle, item.is_completed && styles.completedText]}>
+                            {item.title}
+                          </Text>
+                          {item.is_routine && (
+                            <View style={styles.routineBadge}>
+                              <Text style={styles.routineBadgeText}>루틴</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={[styles.scheduleTime, item.is_completed && styles.completedText]}>
+                          {item.start_time} - {item.end_time}
                         </Text>
-                        {item.is_routine && (
-                          <View style={styles.routineBadge}>
-                            <Text style={styles.routineBadgeText}>루틴</Text>
-                          </View>
-                        )}
                       </View>
-                      <Text style={[styles.scheduleTime, item.is_completed && styles.completedText]}>
-                        {item.start_time} - {item.end_time}
-                      </Text>
+                      
+                      <TouchableOpacity 
+                        style={[styles.checkbox, item.is_completed && { backgroundColor: item.color, borderColor: item.color }]}
+                        onPress={() => toggleCompletion(item)}
+                      >
+                        {item.is_completed && <Check size={14} color="white" strokeWidth={3} />}
+                      </TouchableOpacity>
                     </View>
-                    
-                    <TouchableOpacity 
-                      style={[styles.checkbox, item.is_completed && { backgroundColor: item.color, borderColor: item.color }]}
-                      onPress={() => toggleCompletion(item)}
-                    >
-                      {item.is_completed && <Check size={14} color="white" strokeWidth={3} />}
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                  </TouchableOpacity>
+                </SwipeableRow>
                 <View style={{ height: SPACING.sm }} />
-              </SwipeableRow>
+              </React.Fragment>
             ))
           )}
         </View>
@@ -394,18 +400,11 @@ const styles = StyleSheet.create({
   },
   scheduleItem: {
     flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
-    marginBottom: SPACING.sm,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
   colorBar: {
     width: 6,
+    borderTopLeftRadius: BORDER_RADIUS.md - 1,
+    borderBottomLeftRadius: BORDER_RADIUS.md - 1,
   },
   scheduleCardContent: {
     flex: 1,

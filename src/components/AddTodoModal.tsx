@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -50,7 +50,10 @@ export default function AddTodoModal({ visible, type, initialValues, onClose, on
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView 
+        style={styles.modalOverlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <View style={[styles.modalContent, { paddingBottom: insets.bottom + SPACING.lg }]}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>{getTitle()}</Text>
@@ -74,7 +77,7 @@ export default function AddTodoModal({ visible, type, initialValues, onClose, on
             <Text style={styles.saveButtonText}>{getButtonText()}</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

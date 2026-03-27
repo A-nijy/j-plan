@@ -107,7 +107,6 @@ export default function TodoScreen() {
     <ScaleDecorator>
       <SwipeableRow
         onDelete={() => handleDeleteTodo(item.id)}
-        onPress={() => handlePressItem(item)}
       >
         <TouchableOpacity 
           style={[
@@ -115,6 +114,7 @@ export default function TodoScreen() {
             isActive && { backgroundColor: COLORS.background, elevation: 5 },
             { marginBottom: 0 }
           ]} 
+          onPress={() => handlePressItem(item)}
           onLongPress={drag}
           delayLongPress={200}
         >
@@ -138,8 +138,8 @@ export default function TodoScreen() {
             </View>
           )}
         </TouchableOpacity>
-        <View style={{ height: SPACING.sm }} />
       </SwipeableRow>
+      <View style={{ height: SPACING.sm }} />
     </ScaleDecorator>
   );
 
@@ -375,15 +375,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.surface,
     padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    marginBottom: SPACING.sm,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
   todoLeft: {
     flexDirection: 'row',
