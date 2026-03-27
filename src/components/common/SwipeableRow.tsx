@@ -26,8 +26,8 @@ export default function SwipeableRow({
     dragX: Animated.AnimatedInterpolation<number>
   ) => {
     const trans = dragX.interpolate({
-      inputRange: [-80, 0],
-      outputRange: [0, 80],
+      inputRange: [-90, 0],
+      outputRange: [0, 90],
     });
 
     const handleDelete = () => {
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   rightActionContainer: {
-    width: 80,
+    width: 90,
     flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
   },
   rightAction: {
