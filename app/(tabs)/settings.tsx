@@ -1,9 +1,24 @@
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
-import { Database, Cloud, HelpCircle, Info } from 'lucide-react-native';
+import { Database, Cloud, HelpCircle, Info, RotateCcw } from 'lucide-react-native';
 import { clearAllData } from '../../src/services/database';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+import { BackupService } from '../../src/services/BackupService';
+import React, { useEffect, useState } from 'react';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function SettingsScreen() {
+  const [isBackupLoading, setIsBackupLoading] = useState(false);
+  const [lastBackupTime, setLastBackupTime] = useState<string | null>(null);
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    androidClientId: '861751141444-nnt7n7u7n7u7n7u7n7u7.apps.googleusercontent.com', // Placeholder
+    iosClientId: '861751141444-nnt7n7u7n7u7n7u7n7u7.apps.googleusercontent.com', // Placeholder
+    scopes: ['https://www.googleapis.com/auth/drive.appdata'],
+  });
+
   const handleReset = async () => {
     Alert.alert(
       '데이터 초기화',
@@ -22,6 +37,63 @@ export default function SettingsScreen() {
         }
       ]
     );
+  };
+
+  const executeBackup = async (token: string) => {
+    try {
+      setIsBackupLoading(true);
+      await BackupService.backup(token);
+      Alert.alert('백업 성공', '데이터가 구글 드라이브에 안전하게 저장되었습니다.');
+      // Update last backup info
+      const info = await BackupService.findBackupFile(token);
+      if (info) setLastBackupTime(new Date(info.modifiedTime).toLocaleString('ko-KR'));
+    } catch (error: any) {
+      Alert.alert('백업 실패', error.message || '백업 중 오류가 발생했습니다.');
+    } finally {
+      setIsBackupLoading(false);
+    }
+  };
+
+  const executeRestore = async (token: string) => {
+    try {
+      setIsBackupLoading(true);
+      await BackupService.restore(token);
+      Alert.alert(
+        '복원 성공', 
+        '데이터 복원이 완료되었습니다. 앱의 최신 상태를 반영하기 위해 앱을 재시작해 주세요.',
+        [{ text: '확인' }]
+      );
+    } catch (error: any) {
+      Alert.alert('복원 실패', error.message || '복원 중 오류가 발생했습니다.');
+    } finally {
+      setIsBackupLoading(false);
+    }
+  };
+
+  const handleAuthAndAction = async (action: 'backup' | 'restore') => {
+    if (isBackupLoading) return;
+
+    // In a real app, you would check if token is already present or valid
+    // For simplicity, we prompt for login every time or use the hook response
+    const result = await promptAsync();
+    
+    if (result?.type === 'success') {
+      const { authentication } = result;
+      if (authentication?.accessToken) {
+        if (action === 'backup') {
+          await executeBackup(authentication.accessToken);
+        } else {
+          Alert.alert(
+            '데이터 복원',
+            '기존 데이터를 구글 드라이브에 저장된 데이터로 덮어씌웁니다. 계속하시겠습니까?',
+            [
+              { text: '취소', style: 'cancel' },
+              { text: '복원', onPress: () => executeRestore(authentication.accessToken) }
+            ]
+          );
+        }
+      }
+    }
   };
 
   const MenuItem = ({ icon: Icon, title, subtitle, onPress }: any) => (
@@ -46,8 +118,14 @@ export default function SettingsScreen() {
         <MenuItem 
           icon={Cloud} 
           title="Google Drive 백업" 
-          subtitle="현재 데이터를 구글 드라이브에 저장합니다."
-          onPress={() => Alert.alert('알림', '준비 중인 기능입니다.')}
+          subtitle={isBackupLoading ? "진행 중..." : (lastBackupTime ? `최근 백업: ${lastBackupTime}` : "데이터를 구글 드라이브에 저장")}
+          onPress={() => handleAuthAndAction('backup')}
+        />
+        <MenuItem 
+          icon={RotateCcw} 
+          title="Google Drive 복원" 
+          subtitle="드라이브 백업 데이터로 복원합니다."
+          onPress={() => handleAuthAndAction('restore')}
         />
         <MenuItem 
           icon={Database} 
