@@ -8,8 +8,8 @@ import { format, addDays, subDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Plus, Eye, EyeOff, Check, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import AddScheduleModal from '../../src/components/AddScheduleModal';
-import { useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useCallback, useLayoutEffect } from 'react';
 import { WeeklySettings, WeeklySettingsService } from '../../src/services/WeeklySettingsService';
 import { ScheduleDetailModal } from '../../src/components/ScheduleDetailModal';
 import { RoutineService } from '../../src/services/RoutineService';
@@ -18,8 +18,8 @@ import { SeedService } from '../../src/services/SeedService';
 import SwipeableRow from '../../src/components/common/SwipeableRow';
 import OnboardingTooltip from '../../src/components/common/OnboardingTooltip';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 export default function TodayScreen() {
+  const navigation = useNavigation();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [initialValues, setInitialValues] = useState<any>(null);
@@ -41,6 +41,25 @@ export default function TodayScreen() {
   const moveDate = (offset: number) => {
     setSelectedDate(prev => offset > 0 ? addDays(prev, offset) : subDays(prev, -offset));
   };
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity 
+          style={[styles.seedButton, { marginRight: SPACING.md }]}
+          onPress={async () => {
+            const success = await SeedService.seedTestData();
+            if (success) {
+              Alert.alert('성공', '테스트 데이터가 생성되었습니다.');
+              loadSchedules();
+            }
+          }}
+        >
+          <Text style={styles.seedButtonText}>SEED</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   const toggleClock = async () => {
     if (!settings) return;
@@ -228,18 +247,6 @@ export default function TodayScreen() {
             </View>
 
             <View style={styles.headerButtons}>
-              <TouchableOpacity 
-                style={styles.seedButton}
-                onPress={async () => {
-                  const success = await SeedService.seedTestData();
-                  if (success) {
-                    Alert.alert('성공', '테스트 데이터가 생성되었습니다. 앱을 재시작하거나 화면을 새로고침해주세요.');
-                    loadSchedules();
-                  }
-                }}
-              >
-                <Text style={styles.seedButtonText}>SEED</Text>
-              </TouchableOpacity>
               {hasDeletedRoutines && (
                 <TouchableOpacity 
                   style={styles.restoreHeaderButton}
