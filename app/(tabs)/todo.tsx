@@ -94,13 +94,8 @@ export default function TodoScreen() {
   };
 
   const handlePressItem = (item: any) => {
-    if (tab === 'habit') {
-      setSelectedHistoryTodo(item);
-      setHistoryModalVisible(true);
-    } else {
-      setSelectedDetailTodo(item);
-      setDetailVisible(true);
-    }
+    setSelectedDetailTodo(item);
+    setDetailVisible(true);
   };
 
   const renderItem = ({ item, drag, isActive }: RenderItemParams<any>) => (
@@ -132,10 +127,16 @@ export default function TodoScreen() {
           </View>
 
           {tab === 'habit' && (
-            <View style={styles.streakBadge}>
+            <TouchableOpacity 
+              style={styles.streakBadge}
+              onPress={() => {
+                setSelectedHistoryTodo(item);
+                setHistoryModalVisible(true);
+              }}
+            >
               <Flame size={14} color={item.streak > 0 ? '#FF8B3D' : COLORS.textSecondary} style={{ marginRight: 2 }} />
               <Text style={[styles.streakText, item.streak > 0 && { color: '#FF8B3D' }]}>{item.streak}</Text>
-            </View>
+            </TouchableOpacity>
           )}
         </TouchableOpacity>
       </SwipeableRow>
@@ -249,10 +250,6 @@ export default function TodoScreen() {
           onClose={() => {
             setHistoryModalVisible(false);
             setSelectedHistoryTodo(null);
-          }}
-          onEdit={(id, content) => {
-            setEditingTodo({ id, content });
-            setModalVisible(true);
           }}
         />
       )}

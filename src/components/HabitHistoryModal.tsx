@@ -14,10 +14,9 @@ interface HabitHistoryModalProps {
     id: string;
     content: string;
   };
-  onEdit: (id: string, content: string) => void;
 }
 
-export default function HabitHistoryModal({ visible, onClose, todo, onEdit }: HabitHistoryModalProps) {
+export default function HabitHistoryModal({ visible, onClose, todo }: HabitHistoryModalProps) {
   const insets = useSafeAreaInsets();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -192,12 +191,6 @@ export default function HabitHistoryModal({ visible, onClose, todo, onEdit }: Ha
                       <Text style={styles.activeContentText}>{activeContent}</Text>
                     </View>
 
-                    {isContentChangedDay(selectedDateStr) && (
-                      <View style={styles.changeNotice}>
-                        <Edit3 size={14} color={COLORS.primary} />
-                        <Text style={styles.changeNoticeText}>이 날짜에 투두 내용이 수정되었습니다.</Text>
-                      </View>
-                    )}
                   </>
                 )}
               </View>
@@ -213,18 +206,6 @@ export default function HabitHistoryModal({ visible, onClose, todo, onEdit }: Ha
                 </View>
               </View>
 
-              <View style={styles.footer}>
-                <TouchableOpacity 
-                   style={styles.editButton}
-                   onPress={() => {
-                     onEdit(todo.id, todo.content);
-                     onClose();
-                   }}
-                >
-                  <Edit3 size={16} color="white" style={{ marginRight: 6 }} />
-                  <Text style={styles.editButtonText}>습관 변경</Text>
-                </TouchableOpacity>
-              </View>
             </ScrollView>
           )}
         </View>
