@@ -41,10 +41,11 @@ export default function RestoreRoutineModal({ visible, onClose, date, onRestored
       // 1. Conflict Check
       const conflict = await ScheduleService.checkConflictForRestore(routine.id, date);
       
-      if (conflict.hasOverlap && conflict.conflictingItem) {
+      if (conflict.hasOverlap && 'conflictingItem' in conflict) {
+        const conflictingItem = conflict.conflictingItem as any;
         Alert.alert(
           '복구 불가',
-          `해당 시간대에 겹치는 일정이 있어 복구할 수 없습니다.\n\n[충돌 일정]\n${conflict.conflictingItem.title}\n(${conflict.conflictingItem.start_time} - ${conflict.conflictingItem.end_time})`,
+          `해당 시간대에 겹치는 일정이 있어 복구할 수 없습니다.\n\n[충돌 일정]\n${conflictingItem.title}\n(${conflictingItem.start_time} - ${conflictingItem.end_time})`,
           [{ text: '확인' }]
         );
         return;
@@ -92,7 +93,7 @@ export default function RestoreRoutineModal({ visible, onClose, date, onRestored
   return (
     <Modal visible={visible} animationType="fade" transparent>
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { paddingBottom: insets.bottom + SPACING.lg }]}>
+        <View style={styles.modalContent}>
           <View style={styles.header}>
             <View style={styles.headerTitleContainer}>
               <RotateCcw size={20} color={COLORS.text} style={{ marginRight: 8 }} />
@@ -120,10 +121,6 @@ export default function RestoreRoutineModal({ visible, onClose, date, onRestored
               contentContainerStyle={styles.listContent}
             />
           )}
-
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>닫기</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -231,19 +228,5 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     color: COLORS.textSecondary,
-  },
-  closeButton: {
-    marginTop: SPACING.md,
-    padding: SPACING.md,
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  closeButtonText: {
-    fontSize: 16,
-    color: COLORS.text,
-    fontWeight: '600',
   },
 });
