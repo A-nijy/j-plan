@@ -97,7 +97,9 @@ const DatePickerModal = ({ visible, onClose, onSelect, initialDate }: DatePicker
           <View style={styles.calendarGrid}>
             <View style={styles.weekdayRow}>
               {weekDayLabels.map(label => (
-                <Text key={label} style={styles.weekdayText}>{label}</Text>
+                <View key={label} style={styles.weekdayCell}>
+                  <Text style={styles.weekdayText}>{label}</Text>
+                </View>
               ))}
             </View>
             <View style={styles.daysGrid}>
@@ -500,9 +502,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: SPACING.xs,
   },
-  weekdayText: {
+  weekdayCell: {
     flex: 1,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  weekdayText: {
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
     fontSize: 12,
     fontWeight: 'bold',
     color: COLORS.textSecondary,
@@ -513,7 +522,7 @@ const styles = StyleSheet.create({
   },
   dayCell: {
     width: `${100 / 7}%`,
-    aspectRatio: 1,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: BORDER_RADIUS.md,
@@ -524,6 +533,9 @@ const styles = StyleSheet.create({
   dayText: {
     fontSize: 14,
     color: COLORS.text,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   selectedDayText: {
     color: COLORS.surface,
