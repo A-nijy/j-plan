@@ -24,16 +24,16 @@ export class TodoService {
     const nextOrder = (maxOrderRes?.max_order || 0) + 1;
 
     await db.runAsync(
-      `INSERT INTO todos (id, content, is_completed, type, target_date, habit_days, item_order, created_at, updated_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, todo.content, todo.is_completed, todo.type, todo.target_date || null, todo.habit_days || null, nextOrder, createdAt, now]
+      `INSERT INTO todos (id, content, description, is_completed, type, target_date, habit_days, item_order, created_at, updated_at) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, todo.content, todo.description || null, todo.is_completed, todo.type, todo.target_date || null, todo.habit_days || null, nextOrder, createdAt, now]
     );
 
     // Initial content history
     await db.runAsync(
-      `INSERT INTO todo_content_history (id, todo_id, content, start_date, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      [Crypto.randomUUID(), id, todo.content, historyStartDate, now]
+      `INSERT INTO todo_content_history (id, todo_id, content, description, start_date, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [Crypto.randomUUID(), id, todo.content, todo.description || null, historyStartDate, now]
     );
 
     return id;
@@ -58,8 +58,8 @@ export class TodoService {
 
       // Map content from history for each habit
       const mappedHabits = await Promise.all(habits.map(async h => {
-        const history = await db.getFirstAsync<{ content: string }>(
-          `SELECT content FROM todo_content_history 
+        const history = await db.getFirstAsync<{ content: string, description: string }>(
+          `SELECT content, description FROM todo_content_history 
            WHERE todo_id = ? AND start_date <= ? 
            ORDER BY start_date DESC LIMIT 1`,
           [h.id, date]
@@ -69,7 +69,8 @@ export class TodoService {
         
         return {
           ...h,
-          content: history?.content || h.content,
+          content: history ? history.content : h.content,
+          description: history ? (history.description || '') : (h.description || ''),
           streak: streak
         };
       }));
@@ -141,8 +142,8 @@ export class TodoService {
       [todoId]
     );
     
-    const contentHistory = await db.getAllAsync<{ content: string, start_date: string }>(
-      'SELECT content, start_date FROM todo_content_history WHERE todo_id = ? ORDER BY start_date ASC',
+    const contentHistory = await db.getAllAsync<{ content: string, description: string, start_date: string }>(
+      'SELECT content, description, start_date FROM todo_content_history WHERE todo_id = ? ORDER BY start_date ASC',
       [todoId]
     );
 
@@ -177,7 +178,7 @@ export class TodoService {
     );
   }
 
-  static async updateTodo(id: string, content: string, date: string = new Date().toISOString().split('T')[0]) {
+  static async updateTodo(id: string, content: string, description: string = '', date: string = new Date().toISOString().split('T')[0]) {
     const db = await this.getDb();
     const now = new Date().toISOString();
     
@@ -189,16 +190,16 @@ export class TodoService {
     );
 
     if (!hasHistory) {
-      const todo = await db.getFirstAsync<{ content: string, created_at: string }>(
-        'SELECT content, created_at FROM todos WHERE id = ?',
+      const todo = await db.getFirstAsync<{ content: string, description: string, created_at: string }>(
+        'SELECT content, description, created_at FROM todos WHERE id = ?',
         [id]
       );
       if (todo) {
         const originalStartDate = todo.created_at.split(' ')[0];
         await db.runAsync(
-          `INSERT INTO todo_content_history (id, todo_id, content, start_date, created_at)
-           VALUES (?, ?, ?, ?, ?)`,
-          [`init_${id}`, id, todo.content, originalStartDate, todo.created_at]
+          `INSERT INTO todo_content_history (id, todo_id, content, description, start_date, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [`init_${id}`, id, todo.content, todo.description || null, originalStartDate, todo.created_at]
         );
       }
     }
@@ -212,21 +213,21 @@ export class TodoService {
 
     if (existingAtDate) {
       await db.runAsync(
-        'UPDATE todo_content_history SET content = ? WHERE id = ?',
-        [content, existingAtDate.id]
+        'UPDATE todo_content_history SET content = ?, description = ? WHERE id = ?',
+        [content, description, existingAtDate.id]
       );
     } else {
       await db.runAsync(
-        `INSERT INTO todo_content_history (id, todo_id, content, start_date, created_at)
-         VALUES (?, ?, ?, ?, ?)`,
-        [Crypto.randomUUID(), id, content, date, now]
+        `INSERT INTO todo_content_history (id, todo_id, content, description, start_date, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [Crypto.randomUUID(), id, content, description, date, now]
       );
     }
 
     // Also update the main table (as the "current" content)
     await db.runAsync(
-      'UPDATE todos SET content = ?, updated_at = ? WHERE id = ?',
-      [content, now, id]
+      'UPDATE todos SET content = ?, description = ?, updated_at = ? WHERE id = ?',
+      [content, description, now, id]
     );
   }
 

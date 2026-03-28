@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
-import { X, CheckCircle2, Circle, Edit3, AlignLeft } from 'lucide-react-native';
+import { X, CheckCircle2, Circle, Edit3, AlignLeft, Type } from 'lucide-react-native';
 
 interface TodoDetailModalProps {
   visible: boolean;
@@ -9,10 +9,11 @@ interface TodoDetailModalProps {
   todo: {
     id: string;
     content: string;
+    description?: string;
     is_completed: number;
     target_date?: string;
   } | null;
-  onEdit: (id: string, content: string) => void;
+  onEdit: (id: string, content: string, description?: string) => void;
 }
 
 export const TodoDetailModal: React.FC<TodoDetailModalProps> = ({
@@ -45,10 +46,22 @@ export const TodoDetailModal: React.FC<TodoDetailModalProps> = ({
 
               <ScrollView style={styles.content}>
 
+                <View style={[styles.contentSection, { marginBottom: SPACING.xl }]}>
+                  <View style={styles.infoRow}>
+                    <Type size={20} color={COLORS.primary} style={styles.icon} />
+                    <Text style={[styles.contentText, { fontWeight: '700' }]}>{todo.content}</Text>
+                  </View>
+                </View>
+
                 <View style={styles.contentSection}>
                   <View style={styles.infoRow}>
                     <AlignLeft size={20} color={COLORS.primary} style={styles.icon} />
-                    <Text style={styles.contentText}>{todo.content}</Text>
+                    <Text style={[
+                      styles.contentText, 
+                      !todo.description && { color: COLORS.textSecondary, fontStyle: 'italic' }
+                    ]}>
+                      {todo.description || '(내용 없음)'}
+                    </Text>
                   </View>
                 </View>
               </ScrollView>
@@ -57,7 +70,7 @@ export const TodoDetailModal: React.FC<TodoDetailModalProps> = ({
                 <TouchableOpacity 
                   style={styles.editButton}
                   onPress={() => {
-                    onEdit(todo.id, todo.content);
+                    onEdit(todo.id, todo.content, todo.description);
                     onClose();
                   }}
                 >

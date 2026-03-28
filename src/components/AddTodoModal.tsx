@@ -7,11 +7,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 interface AddTodoModalProps {
   visible: boolean;
   type: 'habit' | 'daily';
-  initialValues?: { id: string; content: string };
+  initialValues?: { id: string; content: string; description?: string };
   onClose: () => void;
   onSave: (todo: {
     id?: string;
     content: string;
+    description?: string;
     type: 'habit' | 'daily';
   }) => void;
 }
@@ -19,10 +20,12 @@ interface AddTodoModalProps {
 export default function AddTodoModal({ visible, type, initialValues, onClose, onSave }: AddTodoModalProps) {
   const insets = useSafeAreaInsets();
   const [content, setContent] = useState('');
+  const [description, setDescription] = useState('');
 
   useEffect(() => {
     if (visible) {
       setContent(initialValues?.content || '');
+      setDescription(initialValues?.description || '');
     }
   }, [visible, initialValues]);
 
@@ -31,9 +34,11 @@ export default function AddTodoModal({ visible, type, initialValues, onClose, on
     onSave({
       id: initialValues?.id,
       content,
+      description,
       type,
     });
     setContent('');
+    setDescription('');
     onClose();
   };
 
@@ -63,14 +68,29 @@ export default function AddTodoModal({ visible, type, initialValues, onClose, on
           </View>
 
           <View style={styles.form}>
-            <Text style={styles.label}>내용</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="내용을 입력하세요"
-              value={content}
-              onChangeText={setContent}
-              autoFocus
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>제목</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="제목을 입력하세요"
+                value={content}
+                onChangeText={setContent}
+                autoFocus
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>세부 내용</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="세부 내용을 입력하세요 (선택 사항)"
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
           </View>
 
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
@@ -109,6 +129,9 @@ const styles = StyleSheet.create({
   form: {
     marginBottom: SPACING.lg,
   },
+  inputGroup: {
+    marginBottom: SPACING.md,
+  },
   label: {
     fontSize: 14,
     color: COLORS.textSecondary,
@@ -120,6 +143,10 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     fontSize: 16,
     color: COLORS.text,
+  },
+  textArea: {
+    minHeight: 100,
+    paddingTop: SPACING.md,
   },
   saveButton: {
     backgroundColor: COLORS.primary,

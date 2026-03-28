@@ -19,7 +19,7 @@ export default function TodoScreen() {
   const [tab, setTab] = useState<'habit' | 'daily'>('habit');
   const [todos, setTodos] = useState<any[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingTodo, setEditingTodo] = useState<{ id: string; content: string } | undefined>(undefined);
+  const [editingTodo, setEditingTodo] = useState<{ id: string; content: string; description?: string } | undefined>(undefined);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
   const [selectedHistoryTodo, setSelectedHistoryTodo] = useState<any>(null);
   const [selectedDetailTodo, setSelectedDetailTodo] = useState<any>(null);
@@ -58,7 +58,7 @@ export default function TodoScreen() {
     try {
       if (todoData.id) {
         // Edit mode - versioned by current selected date
-        await TodoService.updateTodo(todoData.id, todoData.content, dateStr);
+        await TodoService.updateTodo(todoData.id, todoData.content, todoData.description, dateStr);
       } else {
         // Add mode
         await TodoService.createTodo({
@@ -262,8 +262,8 @@ export default function TodoScreen() {
             setDetailVisible(false);
             setSelectedDetailTodo(null);
           }}
-          onEdit={(id, content) => {
-            setEditingTodo({ id, content });
+          onEdit={(id, content, description) => {
+            setEditingTodo({ id, content, description });
             setModalVisible(true);
           }}
         />

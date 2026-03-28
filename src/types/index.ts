@@ -20,7 +20,8 @@ export interface Schedule extends BaseEntity {
 }
 
 export interface Todo extends BaseEntity {
-  content: string;
+  content: string; // Title
+  description?: string; // Detailed content
   is_completed: number;
   type: 'habit' | 'daily';
   target_date?: string; // For daily todos

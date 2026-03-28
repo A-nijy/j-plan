@@ -48,6 +48,7 @@ export const initDatabase = async () => {
       CREATE TABLE IF NOT EXISTS todos (
         id TEXT PRIMARY KEY NOT NULL,
         content TEXT NOT NULL,
+        description TEXT,
         is_completed INTEGER DEFAULT 0,
         type TEXT NOT NULL,
         target_date TEXT,
@@ -60,6 +61,9 @@ export const initDatabase = async () => {
     `);
     try {
       await db.execAsync("ALTER TABLE todos ADD COLUMN item_order INTEGER DEFAULT 0;");
+    } catch (e) { /* Column might already exist */ }
+    try {
+      await db.execAsync("ALTER TABLE todos ADD COLUMN description TEXT;");
     } catch (e) { /* Column might already exist */ }
 
     // Weekly Settings Table
@@ -94,10 +98,23 @@ export const initDatabase = async () => {
         id TEXT PRIMARY KEY NOT NULL,
         todo_id TEXT NOT NULL,
         content TEXT NOT NULL,
+        description TEXT,
         start_date TEXT NOT NULL,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    try {
+      await db.execAsync("ALTER TABLE todo_content_history ADD COLUMN description TEXT;");
+    } catch (e) { /* Column might already exist */ }
+
+    // Ensure all existing history entries have a description if they were NULL
+    try {
+      await db.execAsync(`
+        UPDATE todo_content_history 
+        SET description = (SELECT description FROM todos WHERE todos.id = todo_content_history.todo_id)
+        WHERE description IS NULL
+      `);
+    } catch (e) { /* Might fail if some constraint exists or table is busy */ }
 
     // Migration for weekly_settings
     try {
@@ -190,8 +207,8 @@ export const initDatabase = async () => {
     }
 
     // Migration: Ensure all todos have at least one entry in todo_content_history for their creation date
-    const allHabits = await db.getAllAsync<{ id: string, content: string, created_at: string }>(
-      'SELECT id, content, created_at FROM todos WHERE type = "habit"'
+    const allHabits = await db.getAllAsync<{ id: string, content: string, description: string, created_at: string }>(
+      'SELECT id, content, description, created_at FROM todos WHERE type = "habit"'
     );
 
     for (const todo of allHabits) {
@@ -203,9 +220,9 @@ export const initDatabase = async () => {
 
       if (!hasInitialHistory) {
         await db.runAsync(
-          `INSERT INTO todo_content_history (id, todo_id, content, start_date, created_at)
-           VALUES (?, ?, ?, ?, ?)`,
-          [`init_${todo.id}`, todo.id, todo.content, startDate, todo.created_at]
+          `INSERT INTO todo_content_history (id, todo_id, content, description, start_date, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [`init_${todo.id}`, todo.id, todo.content, todo.description || null, startDate, todo.created_at]
         );
       }
     }

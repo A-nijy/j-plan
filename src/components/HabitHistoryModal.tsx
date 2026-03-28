@@ -13,6 +13,7 @@ interface HabitHistoryModalProps {
   todo: {
     id: string;
     content: string;
+    description?: string;
   };
 }
 
@@ -20,7 +21,10 @@ export default function HabitHistoryModal({ visible, onClose, todo }: HabitHisto
   const insets = useSafeAreaInsets();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [historyData, setHistoryData] = useState<{ completions: string[], contentHistory: { content: string, start_date: string }[] } | null>(null);
+  const [historyData, setHistoryData] = useState<{ 
+    completions: string[], 
+    contentHistory: { content: string, description: string, start_date: string }[] 
+  } | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -47,11 +51,15 @@ export default function HabitHistoryModal({ visible, onClose, todo }: HabitHisto
   });
 
   const getDayContent = (date: string) => {
-    if (!historyData) return todo.content;
+    if (!historyData) return { content: todo.content, description: todo.description || '' };
     const history = [...historyData.contentHistory]
       .sort((a, b) => b.start_date.localeCompare(a.start_date))
       .find(h => h.start_date <= date);
-    return history?.content || todo.content;
+    
+    return {
+      content: history ? history.content : todo.content,
+      description: history ? (history.description || '') : (todo.description || '')
+    };
   };
 
   const isContentChangedDay = (date: string) => {
@@ -141,7 +149,7 @@ export default function HabitHistoryModal({ visible, onClose, todo }: HabitHisto
   return (
     <Modal visible={visible} animationType="fade" transparent>
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { paddingBottom: insets.bottom + SPACING.lg }]}>
+        <View style={styles.modalContent}>
           <View style={styles.header}>
             <View style={styles.titleContainer}>
               <CalendarIcon size={20} color={COLORS.primary} style={{ marginRight: 8 }} />
@@ -159,6 +167,17 @@ export default function HabitHistoryModal({ visible, onClose, todo }: HabitHisto
           ) : (
             <ScrollView showsVerticalScrollIndicator={false}>
               {renderCalendar()}
+
+              <View style={[styles.legend, { marginTop: -SPACING.md, marginBottom: SPACING.lg }]}>
+                <View style={styles.legendItem}>
+                  <View style={styles.completionDot} />
+                  <Text style={styles.legendText}>달성 완료</Text>
+                </View>
+                <View style={[styles.legendItem, { marginLeft: 16 }]}>
+                  <Edit3 size={12} color={COLORS.primary} />
+                  <Text style={styles.legendText}>내용 수정일</Text>
+                </View>
+              </View>
 
               <View style={styles.detailCard}>
                 <View style={styles.detailHeader}>
@@ -187,24 +206,24 @@ export default function HabitHistoryModal({ visible, onClose, todo }: HabitHisto
                 ) : (
                   <>
                     <View style={styles.contentWrap}>
-                      <Text style={styles.contentLabel}>당시 기록 내용</Text>
-                      <Text style={styles.activeContentText}>{activeContent}</Text>
+                      <Text style={styles.contentLabel}>제목</Text>
+                      <Text style={[styles.activeContentText, { fontWeight: '700', marginBottom: SPACING.sm }]}>
+                        {activeContent.content}
+                      </Text>
+                      
+                      <Text style={styles.contentLabel}>세부 내용</Text>
+                      <Text style={[
+                        styles.activeContentText,
+                        !activeContent.description && { color: COLORS.textSecondary, fontStyle: 'italic' }
+                      ]}>
+                        {activeContent.description || '(내용 없음)'}
+                      </Text>
                     </View>
 
                   </>
                 )}
               </View>
 
-              <View style={styles.legend}>
-                <View style={styles.legendItem}>
-                  <View style={styles.completionDot} />
-                  <Text style={styles.legendText}>달성 완료</Text>
-                </View>
-                <View style={[styles.legendItem, { marginLeft: 16 }]}>
-                  <Edit3 size={12} color={COLORS.primary} />
-                  <Text style={styles.legendText}>내용 수정일</Text>
-                </View>
-              </View>
 
             </ScrollView>
           )}
@@ -417,29 +436,5 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontSize: 12,
     color: COLORS.textSecondary,
-  },
-  footer: {
-    marginTop: SPACING.md,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: SPACING.md,
-  },
-  editButton: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    borderRadius: BORDER_RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 2,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  editButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 14,
   },
 });
