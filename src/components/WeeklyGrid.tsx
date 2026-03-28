@@ -26,6 +26,8 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
   const weekStart = startOfWeek(startDate, { weekStartsOn: 1 }); // Monday
   const today = new Date();
  
+  const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
   const getScheduleStyle = (schedule: Schedule) => {
     const [startH, startM] = schedule.start_time.split(':').map(Number);
     let [endH, endM] = schedule.end_time.split(':').map(Number);
@@ -38,23 +40,23 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
     const top = (startH - start_hour) * HOUR_HEIGHT + (startM / 60) * HOUR_HEIGHT;
     const height = (endH - startH) * HOUR_HEIGHT + ((endM - startM) / 60) * HOUR_HEIGHT;
     
-    let dayIndex = 0;
-    if (schedule.day_of_week !== null && schedule.day_of_week !== undefined) {
-      dayIndex = (schedule.day_of_week + 6) % 7;
-    } else if (schedule.target_date) {
-      dayIndex = (new Date(schedule.target_date).getDay() + 6) % 7;
-    }
- 
     return {
       top,
       height,
-      left: `${(dayIndex * 100) / 7}%`,
-      width: `${100 / 7}%`,
       backgroundColor: schedule.color,
     };
   };
- 
-  const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  const getSchedulesForDay = (dayIndex: number) => {
+    return schedules.filter(s => {
+      if (s.day_of_week !== null && s.day_of_week !== undefined) {
+        return ((s.day_of_week + 6) % 7) === dayIndex;
+      } else if (s.target_date) {
+        return (new Date(s.target_date).getDay() + 6) % 7 === dayIndex;
+      }
+      return false;
+    });
+  };
   const subLinesCount = 60 / grid_interval;
  
   return (
@@ -94,62 +96,64 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
  
           {/* Grid lines and Schedules */}
           <View style={styles.slotsContainer}>
-            {/* Background Vertical Grid Lines */}
-            <View style={styles.verticalLinesContainer}>
-              {Array.from({ length: 7 }).map((_, i) => (
-                <View key={i} style={styles.verticalLine} />
+            {/* Horizontal Grid Lines */}
+            <View style={styles.horizontalLinesLayer}>
+              {hours.map((h, hIdx) => (
+                <View key={h} style={styles.hourSlot}>
+                  {Array.from({ length: subLinesCount }).map((_, i) => {
+                    const isLastHour = hIdx === hours.length - 1;
+                    const isLastSubLine = i === subLinesCount - 1;
+                    
+                    return (
+                      <View 
+                        key={i} 
+                        style={[
+                          styles.gridLine, 
+                          { height: HOUR_HEIGHT / subLinesCount },
+                          i === 0 ? { borderTopWidth: 1, borderTopColor: COLORS.border + '70' } : { borderTopWidth: 1, borderTopColor: COLORS.border + '20', borderStyle: 'dashed' },
+                          isLastHour && isLastSubLine && { borderBottomWidth: 1, borderBottomColor: COLORS.border + '70' }
+                        ]} 
+                      />
+                    );
+                  })}
+                </View>
               ))}
             </View>
 
-            {/* Horizontal Grid Lines */}
-            {hours.map((h, hIdx) => (
-              <View key={h} style={styles.hourSlot}>
-                {Array.from({ length: subLinesCount }).map((_, i) => {
-                  const isLastHour = hIdx === hours.length - 1;
-                  const isLastSubLine = i === subLinesCount - 1;
-                  
-                  return (
-                    <View 
-                      key={i} 
-                      style={[
-                        styles.gridLine, 
-                        { height: HOUR_HEIGHT / subLinesCount },
-                        i === 0 ? { borderTopWidth: 1, borderTopColor: COLORS.border + '70' } : { borderTopWidth: 1, borderTopColor: COLORS.border + '20', borderStyle: 'dashed' },
-                        isLastHour && isLastSubLine && { borderBottomWidth: 1, borderBottomColor: COLORS.border + '70' }
-                      ]} 
-                    />
-                  );
-                })}
-              </View>
-            ))}
-            
-            {/* Schedule Blocks */}
-            {schedules.map((s) => {
-              const style = getScheduleStyle(s);
-              if (style.top < 0 || style.top >= hours.length * HOUR_HEIGHT) return null;
-              
-              return (
-                <TouchableOpacity
-                  key={s.id}
-                  style={[
-                    styles.scheduleBlock, 
-                    { top: style.top, height: style.height, left: style.left as any, width: style.width as any },
-                    s.is_routine && { zIndex: 5, opacity: 0.7 }
-                  ]}
-                  onPress={() => onPressSchedule?.(s)}
-                >
-                  <View style={[
-                    styles.scheduleInner, 
-                    { backgroundColor: style.backgroundColor },
-                    s.is_routine && { borderStyle: 'dashed', borderWidth: 1 }
-                  ]}>
-                    <Text style={[styles.scheduleTitle, s.is_routine && { color: COLORS.text }]} numberOfLines={2}>
-                      {s.title}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+            {/* Vertical Columns and Schedules */}
+            <View style={styles.columnsContainer}>
+              {weekDates.map((_, dayIndex) => (
+                <View key={dayIndex} style={styles.dayColumn}>
+                  {getSchedulesForDay(dayIndex).map((s) => {
+                    const style = getScheduleStyle(s);
+                    if (style.top < 0 || style.top >= hours.length * HOUR_HEIGHT) return null;
+                    
+                    return (
+                      <TouchableOpacity
+                        key={s.id}
+                        style={[
+                          styles.scheduleBlock, 
+                          { top: style.top, height: style.height },
+                          s.is_routine && { zIndex: 5, opacity: 0.7 }
+                        ]}
+                        onPress={() => onPressSchedule?.(s)}
+                      >
+                        <View style={[
+                          styles.scheduleInner, 
+                          { backgroundColor: style.backgroundColor },
+                          s.is_routine && { borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
+                          s.is_completed && { borderWidth: 2.5, borderColor: 'rgba(0,0,0,0.4)', borderStyle: 'solid' }
+                        ]}>
+                          <Text style={[styles.scheduleTitle, s.is_routine && { color: COLORS.text }]} numberOfLines={2}>
+                            {s.title}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -231,26 +235,30 @@ const styles = StyleSheet.create({
   },
   slotsContainer: {
     flex: 1,
-    position: 'relative',
   },
-  verticalLinesContainer: {
+  horizontalLinesLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  columnsContainer: {
     ...StyleSheet.absoluteFillObject,
     flexDirection: 'row',
   },
-  verticalLine: {
+  dayColumn: {
     flex: 1,
-    borderLeftWidth: 0, // Make vertical lines invisible as requested
+    borderLeftWidth: 1,
+    borderLeftColor: COLORS.border + '50',
+    position: 'relative',
   },
   gridLine: {
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border + '20',
-    borderLeftWidth: 0, // Make vertical lines invisible
   },
   scheduleBlock: {
     position: 'absolute',
+    left: 1,
+    right: 1,
     borderRadius: 4,
     zIndex: 10,
-    marginHorizontal: 1, // Small margin for cleaner look
   },
   scheduleInner: {
     flex: 1,
