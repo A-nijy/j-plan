@@ -7,6 +7,7 @@ import { RoutineService } from '../../src/services/RoutineService';
 import { RoutineTemplate } from '../../src/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AddRoutineModal from '../../src/components/AddRoutineModal';
+import { RoutineDetailModal } from '../../src/components/RoutineDetailModal';
 import SwipeableRow from '../../src/components/common/SwipeableRow';
 import OnboardingTooltip from '../../src/components/common/OnboardingTooltip';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,6 +20,8 @@ export default function RoutineScreen() {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<(RoutineTemplate & { days: number[] }) | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<(RoutineTemplate & { days: number[] }) | null>(null);
+  const [detailVisible, setDetailVisible] = useState(false);
   const [selectedFilterDay, setSelectedFilterDay] = useState<number>(-1); // -1 for All
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -105,6 +108,13 @@ export default function RoutineScreen() {
     }
   };
 
+  const handleEditFromDetail = (template: RoutineTemplate & { days: number[] }) => {
+    setDetailVisible(false);
+    setSelectedTemplate(null);
+    setEditingTemplate(template);
+    setModalVisible(true);
+  };
+
   const renderTemplateItem = ({ item }: { item: RoutineTemplate & { days: number[] } }) => (
     <>
       <SwipeableRow
@@ -113,8 +123,8 @@ export default function RoutineScreen() {
         <TouchableOpacity 
           activeOpacity={0.7}
           onPress={() => {
-            setEditingTemplate(item);
-            setModalVisible(true);
+            setSelectedTemplate(item);
+            setDetailVisible(true);
           }}
           style={[styles.templateCard, { marginBottom: 0 }]}
         >
@@ -229,6 +239,14 @@ export default function RoutineScreen() {
           color: editingTemplate.color,
           days: editingTemplate.days
         } : undefined}
+      />
+
+      <RoutineDetailModal
+        visible={detailVisible}
+        onClose={() => setDetailVisible(false)}
+        routine={selectedTemplate}
+        onEdit={handleEditFromDetail}
+        onDelete={handleDeleteTemplate}
       />
     </View>
   );
