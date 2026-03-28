@@ -97,6 +97,7 @@ export default function WeeklyScreen() {
       end_time: schedule.end_time,
       color: schedule.color,
       is_routine: schedule.is_routine,
+      target_date: schedule.target_date,
     });
     setModalVisible(true);
   };

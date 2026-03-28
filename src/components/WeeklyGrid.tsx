@@ -9,6 +9,25 @@ import { startOfWeek, format, addDays, isSameDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { WeeklySettings } from '../services/WeeklySettingsService';
  
+const isLightColor = (hex: string) => {
+  if (!hex || hex.length < 6) return false;
+  const color = hex.replace('#', '');
+  const r = parseInt(color.substring(0, 2), 16);
+  const g = parseInt(color.substring(2, 4), 16);
+  const b = parseInt(color.substring(4, 6), 16);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 155; 
+};
+
+const hexToRgba = (hex: string, alpha: number) => {
+  if (!hex || hex.length < 6) return hex;
+  const color = hex.replace('#', '');
+  const r = parseInt(color.substring(0, 2), 16);
+  const g = parseInt(color.substring(2, 4), 16);
+  const b = parseInt(color.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 interface WeeklyGridProps {
   schedules: Schedule[];
   onPressSchedule?: (schedule: Schedule) => void;
@@ -129,22 +148,28 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
                     if (style.top < 0 || style.top >= hours.length * HOUR_HEIGHT) return null;
                     
                     return (
-                      <TouchableOpacity
-                        key={s.id}
-                        style={[
-                          styles.scheduleBlock, 
-                          { top: style.top, height: style.height },
-                          s.is_routine && { zIndex: 5, opacity: 0.7 }
-                        ]}
-                        onPress={() => onPressSchedule?.(s)}
-                      >
-                        <View style={[
-                          styles.scheduleInner, 
-                          { backgroundColor: style.backgroundColor },
+                        <TouchableOpacity
+                          key={s.id}
+                          style={[
+                            styles.scheduleBlock, 
+                            { top: style.top, height: style.height },
+                            s.is_routine && { zIndex: 5 }
+                          ]}
+                          onPress={() => onPressSchedule?.(s)}
+                        >
+                          <View style={[
+                            styles.scheduleInner, 
+                            { backgroundColor: s.is_routine ? hexToRgba(style.backgroundColor, 0.7) : style.backgroundColor },
                           s.is_routine && { borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
                           s.is_completed && { borderWidth: 2.5, borderColor: 'rgba(0,0,0,0.4)', borderStyle: 'solid' }
                         ]}>
-                          <Text style={[styles.scheduleTitle, s.is_routine && { color: COLORS.text }]} numberOfLines={2}>
+                          <Text 
+                            style={[
+                              styles.scheduleTitle, 
+                              { color: isLightColor(style.backgroundColor) ? '#000' : '#FFF' }
+                            ]} 
+                            numberOfLines={2}
+                          >
                             {s.title}
                           </Text>
                         </View>

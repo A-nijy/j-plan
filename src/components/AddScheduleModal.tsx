@@ -33,6 +33,7 @@ interface AddScheduleModalProps {
     end_time?: string;
     color?: string;
     is_routine?: boolean;
+    target_date?: string;
   };
 }
 
@@ -182,7 +183,9 @@ export default function AddScheduleModal({
 
       setSelectedColor(initialValues?.color || PRESET_COLORS[0]);
       
-      if (initialDate) {
+      if (initialValues?.target_date) {
+        setSelectedDate(parseISO(initialValues.target_date));
+      } else if (initialDate) {
         setSelectedDate(parseISO(initialDate));
       } else {
         setSelectedDate(new Date());
@@ -304,11 +307,11 @@ export default function AddScheduleModal({
                   style={[
                     styles.colorCircle,
                     { backgroundColor: color },
-                    selectedColor === color && styles.selectedColorCircle
+                    selectedColor.toLowerCase() === color.toLowerCase() && styles.selectedColorCircle
                   ]}
                   onPress={() => setSelectedColor(color)}
                 >
-                  {selectedColor === color && <Check size={16} color="#000" />}
+                  {selectedColor.toLowerCase() === color.toLowerCase() && <Check size={16} color="#000" />}
                 </TouchableOpacity>
               ))}
             </View>
