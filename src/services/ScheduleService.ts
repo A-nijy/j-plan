@@ -323,4 +323,88 @@ export class ScheduleService {
     // if there's anything else in that slot.
     return await this.checkOverlap(date, version.start_time, version.end_time);
   }
+
+  static async getCompletionStatsForRange(startDate: string, endDate: string) {
+    const db = await this.getDb();
+    
+    // 1. Get all regular schedules in range
+    const schedules = await db.getAllAsync<{ target_date: string, is_completed: number }>(
+      'SELECT target_date, is_completed FROM schedules WHERE is_deleted = 0 AND target_date BETWEEN ? AND ?',
+      [startDate, endDate]
+    );
+
+    // 2. Get all routines templates created before endDate
+    const templates = await db.getAllAsync<any>(
+      'SELECT id, created_at FROM routine_templates WHERE DATE(created_at) <= DATE(?)',
+      [endDate]
+    );
+
+    const stats: Record<string, { total: number, completed: number }> = {};
+    if (templates.length === 0 && schedules.length === 0) return stats;
+
+    // 3. Get routine exceptions in range
+    const exceptions = await db.getAllAsync<{ routine_template_id: string, exception_date: string, is_deleted: number, is_completed: number }>(
+      'SELECT routine_template_id, exception_date, is_deleted, is_completed FROM routine_exceptions WHERE exception_date BETWEEN ? AND ?',
+      [startDate, endDate]
+    );
+
+    // 4. Get content history for all templates to know which days they apply to
+    let history: any[] = [];
+    if (templates.length > 0) {
+      const placeholders = templates.map(() => '?').join(',');
+      history = await db.getAllAsync<any>(
+        `SELECT template_id, days_of_week, start_date FROM routine_content_history 
+         WHERE template_id IN (${placeholders}) 
+         ORDER BY start_date ASC`,
+        templates.map(t => t.id)
+      );
+    }
+
+    // Iterate through days
+    let current = new Date(startDate);
+    const end = new Date(endDate);
+    
+    while (current <= end) {
+      const d = current.toISOString().split('T')[0];
+      const dayOfWeek = current.getDay();
+      
+      let total = 0;
+      let completed = 0;
+
+      // Regular schedules
+      const daySchedules = schedules.filter(s => s.target_date === d);
+      total += daySchedules.length;
+      completed += daySchedules.filter(s => s.is_completed === 1).length;
+
+      // Routines
+      for (const t of templates) {
+        // Skip if template created after this date
+        const creationDate = t.created_at.includes(' ') ? t.created_at.split(' ')[0] : t.created_at.split('T')[0];
+        if (new Date(creationDate) > current) continue;
+
+        const templateHistory = history.filter(h => h.template_id === t.id && h.start_date <= d);
+        const version = templateHistory.length > 0 ? templateHistory[templateHistory.length - 1] : null;
+        
+        if (!version) continue;
+
+        const days = (version.days_of_week || '').split(',').filter((x: string) => x !== '').map(Number);
+        if (days.includes(dayOfWeek)) {
+          // Check exception
+          const exception = exceptions.find(e => e.routine_template_id === t.id && e.exception_date === d);
+          if (exception?.is_deleted === 1) continue;
+
+          total++;
+          if (exception?.is_completed === 1) completed++;
+        }
+      }
+
+      if (total > 0) {
+        stats[d] = { total, completed };
+      }
+      
+      current.setDate(current.getDate() + 1);
+    }
+
+    return stats;
+  }
 }

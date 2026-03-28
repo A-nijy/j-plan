@@ -12,6 +12,7 @@ import AddScheduleModal from '../../src/components/AddScheduleModal';
 import { WeeklySettingsService, WeeklySettings } from '../../src/services/WeeklySettingsService';
 import { WeeklySettingsModal } from '../../src/components/WeeklySettingsModal';
 import { ScheduleDetailModal } from '../../src/components/ScheduleDetailModal';
+import Svg, { Circle } from 'react-native-svg';
 
 export default function WeeklyScreen() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -23,6 +24,7 @@ export default function WeeklyScreen() {
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
+  const [completionStats, setCompletionStats] = useState<Record<string, { total: number, completed: number }>>({});
   const today = new Date();
   
   const loadSettings = useCallback(async () => {
@@ -49,6 +51,19 @@ export default function WeeklyScreen() {
       loadSettings();
       loadWeeklySchedules();
     }, [loadSettings, loadWeeklySchedules])
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      const monthStart = startOfMonth(currentWeekStart);
+      const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+      const calendarEnd = addDays(startOfWeek(endOfMonth(monthStart), { weekStartsOn: 0 }), 6);
+      
+      const startStr = format(calendarStart, 'yyyy-MM-dd');
+      const endStr = format(calendarEnd, 'yyyy-MM-dd');
+
+      ScheduleService.getCompletionStatsForRange(startStr, endStr).then(setCompletionStats);
+    }, [currentWeekStart])
   );
 
   const moveWeek = (direction: number) => {
@@ -146,6 +161,8 @@ export default function WeeklyScreen() {
             const isSelectedWeek = isSameDay(date, currentWeekStart) || 
                                    (date >= currentWeekStart && date < addDays(currentWeekStart, 7));
             const isToday = isSameDay(date, today);
+            const dateKey = format(date, 'yyyy-MM-dd');
+            const stat = completionStats[dateKey];
 
             return (
               <TouchableOpacity 
@@ -160,6 +177,32 @@ export default function WeeklyScreen() {
                   setSelectedDay(date.getDay());
                 }}
               >
+                {stat && (
+                  <View style={styles.statCircleContainer}>
+                    <Svg width={28} height={28}>
+                      <Circle
+                        cx={14}
+                        cy={14}
+                        r={12}
+                        stroke={isToday ? 'rgba(255,255,255,0.3)' : COLORS.border + '30'}
+                        strokeWidth="2.5"
+                        fill="transparent"
+                      />
+                      <Circle
+                        cx={14}
+                        cy={14}
+                        r={12}
+                        stroke={isToday ? '#FFF' : (stat.completed === stat.total ? COLORS.primary : COLORS.primary + '80')}
+                        strokeWidth="2.5"
+                        fill="transparent"
+                        strokeDasharray={2 * Math.PI * 12}
+                        strokeDashoffset={2 * Math.PI * 12 * (1 - stat.completed / stat.total)}
+                        strokeLinecap="round"
+                        transform="rotate(-90 14 14)"
+                      />
+                    </Svg>
+                  </View>
+                )}
                 <Text style={[
                   styles.dayCellText, 
                   !isCurrentMonth && styles.otherMonthText,
@@ -351,6 +394,14 @@ const styles = StyleSheet.create({
   todayCellText: {
     color: COLORS.surface,
     fontWeight: 'bold',
+  },
+  statCircleContainer: {
+    position: 'absolute',
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
   fab: {
     position: 'absolute',

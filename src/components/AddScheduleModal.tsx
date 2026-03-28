@@ -63,15 +63,15 @@ const DatePickerModal = ({ visible, onClose, onSelect, initialDate }: DatePicker
   const [currentMonth, setCurrentMonth] = useState(initialDate);
   const [selectedDate, setSelectedDate] = useState(initialDate);
 
-  useEffect(() => {
-    setSelectedDate(initialDate);
-    setCurrentMonth(initialDate);
-  }, [initialDate, visible]);
-
   const days = eachDayOfInterval({
     start: startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 0 }),
     end: endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 0 }),
   });
+
+  useEffect(() => {
+    setSelectedDate(initialDate);
+    setCurrentMonth(initialDate);
+  }, [initialDate, visible]);
 
   const handlePrevMonth = () => setCurrentMonth(addMonths(currentMonth, -1));
   const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
@@ -106,6 +106,7 @@ const DatePickerModal = ({ visible, onClose, onSelect, initialDate }: DatePicker
               {days.map((day, idx) => {
                 const isSelected = isSameDay(day, selectedDate);
                 const isCurrentMonth = isSameMonth(day, currentMonth);
+                
                 return (
                   <TouchableOpacity
                     key={idx}
