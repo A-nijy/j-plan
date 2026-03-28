@@ -66,7 +66,7 @@ export default function TodoScreen() {
           is_completed: 0,
           target_date: tab === 'daily' ? dateStr : null,
           habit_days: tab === 'habit' ? '1,2,3,4,5,6,0' : null,
-        });
+        }, dateStr);
       }
       loadTodos();
       setEditingTodo(undefined);

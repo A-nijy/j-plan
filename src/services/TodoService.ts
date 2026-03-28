@@ -8,11 +8,13 @@ export class TodoService {
     return await getDb();
   }
 
-  static async createTodo(todo: Omit<Todo, 'id' | 'created_at' | 'updated_at' | 'is_deleted'>) {
+  static async createTodo(todo: Omit<Todo, 'id' | 'created_at' | 'updated_at' | 'is_deleted'>, startDate?: string) {
     const db = await this.getDb();
     const id = Crypto.randomUUID();
     const now = new Date().toISOString();
     const today = now.split('T')[0];
+    const createdAt = startDate ? `${startDate}T${now.split('T')[1]}` : now;
+    const historyStartDate = startDate || today;
     
     // Get current max order
     const maxOrderRes = await db.getFirstAsync<{ max_order: number }>(
@@ -24,14 +26,14 @@ export class TodoService {
     await db.runAsync(
       `INSERT INTO todos (id, content, is_completed, type, target_date, habit_days, item_order, created_at, updated_at) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, todo.content, todo.is_completed, todo.type, todo.target_date || null, todo.habit_days || null, nextOrder, now, now]
+      [id, todo.content, todo.is_completed, todo.type, todo.target_date || null, todo.habit_days || null, nextOrder, createdAt, now]
     );
 
     // Initial content history
     await db.runAsync(
       `INSERT INTO todo_content_history (id, todo_id, content, start_date, created_at)
        VALUES (?, ?, ?, ?, ?)`,
-      [Crypto.randomUUID(), id, todo.content, today, now]
+      [Crypto.randomUUID(), id, todo.content, historyStartDate, now]
     );
 
     return id;

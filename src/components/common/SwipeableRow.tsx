@@ -44,9 +44,14 @@ export default function SwipeableRow({
 
     return (
       <View style={styles.rightActionContainer}>
-        <Animated.View style={{ flex: 1, transform: [{ translateX: trans }] }}>
+        <Animated.View style={{ 
+          flex: 1, 
+          transform: [{ translateX: trans }],
+          backgroundColor: COLORS.error,
+          marginRight: -10, // Far enough to cover the border and stay flush
+        }}>
           <RectButton
-            style={[styles.rightAction, { backgroundColor: COLORS.error }]}
+            style={styles.rightAction}
             onPress={handleDelete}
           >
             <Trash2 color="#FFFFFF" size={24} />
