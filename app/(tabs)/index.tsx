@@ -4,8 +4,9 @@ import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { CircularClock } from '../../src/components/CircularClock';
 import { ScheduleService } from '../../src/services/ScheduleService';
 import { Schedule } from '../../src/types';
-import { Plus, Eye, EyeOff, Check, RotateCcw } from 'lucide-react-native';
-import { format } from 'date-fns';
+import { format, addDays, subDays } from 'date-fns';
+import { ko } from 'date-fns/locale';
+import { Plus, Eye, EyeOff, Check, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import AddScheduleModal from '../../src/components/AddScheduleModal';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
@@ -28,11 +29,17 @@ export default function TodayScreen() {
   const [restoreVisible, setRestoreVisible] = useState(false);
   const [hasDeletedRoutines, setHasDeletedRoutines] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const today = format(new Date(), 'yyyy-MM-dd');
+  const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
   const loadSettings = async () => {
     const data = await WeeklySettingsService.getSettings();
     setSettings(data);
+  };
+
+  const moveDate = (offset: number) => {
+    setSelectedDate(prev => offset > 0 ? addDays(prev, offset) : subDays(prev, -offset));
   };
 
   const toggleClock = async () => {
@@ -48,7 +55,7 @@ export default function TodayScreen() {
       loadSchedules();
       checkDeletedRoutines();
       checkTooltip();
-    }, [])
+    }, [dateStr])
   );
 
   const checkTooltip = async () => {
@@ -61,7 +68,7 @@ export default function TodayScreen() {
 
   const checkDeletedRoutines = async () => {
     try {
-      const deleted = await RoutineService.getDeletedRoutinesForDate(today);
+      const deleted = await RoutineService.getDeletedRoutinesForDate(dateStr);
       setHasDeletedRoutines(deleted.length > 0);
     } catch (error) {
       console.error('Failed to check deleted routines:', error);
@@ -70,7 +77,7 @@ export default function TodayScreen() {
 
   const loadSchedules = async () => {
     try {
-      const data = await ScheduleService.getSchedulesForDate(today);
+      const data = await ScheduleService.getSchedulesForDate(dateStr);
       setSchedules(data);
       checkDeletedRoutines();
       
@@ -99,7 +106,7 @@ export default function TodayScreen() {
           // Change Routine Only Today: 
           // 1. Exclude old routine for today
           const templateId = initialValues.id.split('::')[1];
-          await ScheduleService.excludeRoutineFromDate(templateId, today);
+          await ScheduleService.excludeRoutineFromDate(templateId, dateStr);
           // 2. Create new regular schedule (below)
         } else {
           // Regular schedule edit: Delete old one first
@@ -139,7 +146,7 @@ export default function TodayScreen() {
     try {
       if (schedule.is_routine) {
         const templateId = schedule.id.split('::')[1];
-        await ScheduleService.excludeRoutineFromDate(templateId, today);
+        await ScheduleService.excludeRoutineFromDate(templateId, dateStr);
       } else {
         await ScheduleService.deleteScheduleAtDate(schedule.id);
       }
@@ -160,7 +167,7 @@ export default function TodayScreen() {
     try {
       await ScheduleService.toggleScheduleCompletion(
         schedule.id,
-        today,
+        dateStr,
         !!schedule.is_routine,
         !!schedule.is_completed
       );
@@ -197,7 +204,29 @@ export default function TodayScreen() {
         
         <View style={styles.listContainer}>
           <View style={styles.headerRow}>
-            <Text style={styles.sectionTitle}>오늘의 일정</Text>
+            <View style={styles.headerLeft}>
+              <View style={styles.dateNav}>
+                <TouchableOpacity style={styles.navBtn} onPress={() => moveDate(-1)}>
+                  <ChevronLeft color={COLORS.text} size={22} />
+                </TouchableOpacity>
+                <View style={styles.dateLabelContainer}>
+                  <Text style={styles.dateText}>
+                    {format(selectedDate, 'M월 d일 (E)', { locale: ko })}
+                  </Text>
+                </View>
+                <TouchableOpacity style={styles.navBtn} onPress={() => moveDate(1)}>
+                  <ChevronRight color={COLORS.text} size={22} />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity 
+                style={styles.todayBtn} 
+                onPress={() => setSelectedDate(new Date())}
+              >
+                <Text style={styles.todayBtnText}>오늘</Text>
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.headerButtons}>
               <TouchableOpacity 
                 style={styles.seedButton}
@@ -300,7 +329,7 @@ export default function TodayScreen() {
         }}
         onSave={handleAddSchedule}
         showDatePicker={false}
-        initialDate={today}
+        initialDate={dateStr}
         initialValues={initialValues}
       />
 
@@ -315,7 +344,7 @@ export default function TodayScreen() {
       <RestoreRoutineModal
         visible={restoreVisible}
         onClose={() => setRestoreVisible(false)}
-        date={today}
+        date={dateStr}
         onRestored={() => {
           loadSchedules();
         }}
@@ -339,9 +368,43 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: SPACING.md,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  dateNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateLabelContainer: {
+    paddingHorizontal: SPACING.xs,
+    minWidth: 110,
+    alignItems: 'center',
+  },
+  dateText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  navBtn: {
+    padding: 4,
+  },
+  todayBtn: {
+    backgroundColor: COLORS.primary + '15',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.sm,
+    marginRight: SPACING.xs,
+  },
+  todayBtnText: {
+    color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   sectionTitle: {
     fontSize: 20,
@@ -351,36 +414,37 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.md,
+    gap: SPACING.sm,
+    marginLeft: SPACING.xs,
   },
   settingsButton: {
-    padding: SPACING.xs,
+    padding: 4,
   },
   restoreHeaderButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: COLORS.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
   },
   seedButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
     borderRadius: 4,
     backgroundColor: COLORS.error + '15',
     borderWidth: 1,
     borderColor: COLORS.error,
   },
   seedButtonText: {
-    fontSize: 10,
+    fontSize: 9,
     color: COLORS.error,
     fontWeight: 'bold',
   },
   addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
