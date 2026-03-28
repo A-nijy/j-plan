@@ -4,6 +4,7 @@ import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { WeeklySettings, WeeklySettingsService } from '../services/WeeklySettingsService';
 import { X, Clock } from 'lucide-react-native';
 import { TimePickerModal } from './common/TimePickerModal';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface WeeklySettingsModalProps {
   visible: boolean;
@@ -25,6 +26,7 @@ const VIEW_MODES = [
 ];
 
 export const WeeklySettingsModal: React.FC<WeeklySettingsModalProps> = ({ visible, onClose, settings, onSave }) => {
+  const insets = useSafeAreaInsets();
   const [localSettings, setLocalSettings] = useState<WeeklySettings>(settings);
   const [showPicker, setShowPicker] = useState<'start' | 'end' | null>(null);
 
@@ -51,7 +53,7 @@ export const WeeklySettingsModal: React.FC<WeeklySettingsModalProps> = ({ visibl
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
-        <View style={styles.content}>
+        <View style={[styles.content, { paddingBottom: insets.bottom + SPACING.lg }]}>
           <View style={styles.header}>
             <Text style={styles.title}>주간 시간표 설정</Text>
             <TouchableOpacity onPress={onClose}>
