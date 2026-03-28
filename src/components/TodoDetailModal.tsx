@@ -13,7 +13,6 @@ interface TodoDetailModalProps {
     target_date?: string;
   } | null;
   onEdit: (id: string, content: string) => void;
-  onToggle: (id: string, currentStatus: number) => void;
 }
 
 export const TodoDetailModal: React.FC<TodoDetailModalProps> = ({
@@ -21,7 +20,6 @@ export const TodoDetailModal: React.FC<TodoDetailModalProps> = ({
   onClose,
   todo,
   onEdit,
-  onToggle,
 }) => {
   if (!todo) return null;
 
@@ -46,26 +44,6 @@ export const TodoDetailModal: React.FC<TodoDetailModalProps> = ({
               </View>
 
               <ScrollView style={styles.content}>
-                <View style={styles.statusSection}>
-                   <TouchableOpacity 
-                    style={styles.statusToggle}
-                    onPress={() => onToggle(todo.id, todo.is_completed)}
-                  >
-                    {todo.is_completed === 1 ? (
-                      <CheckCircle2 color={COLORS.primary} size={32} />
-                    ) : (
-                      <Circle color={COLORS.textSecondary} size={32} />
-                    )}
-                    <View style={styles.statusInfo}>
-                      <Text style={styles.statusLabel}>상태</Text>
-                      <Text style={[styles.statusValue, todo.is_completed === 1 && { color: COLORS.primary }]}>
-                        {todo.is_completed === 1 ? '완료됨' : '진행 중'}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.divider} />
 
                 <View style={styles.contentSection}>
                   <View style={styles.infoRow}>

@@ -269,7 +269,6 @@ export default function TodoScreen() {
             setEditingTodo({ id, content });
             setModalVisible(true);
           }}
-          onToggle={handleToggle}
         />
       )}
     </View>
