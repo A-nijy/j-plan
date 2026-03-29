@@ -102,6 +102,21 @@ export default function WeeklyScreen() {
     }
   };
 
+  const toggleCompletion = async (schedule: Schedule) => {
+    try {
+      const dateStr = schedule.target_date || format(addDays(currentWeekStart, (schedule.day_of_week! + 6) % 7), 'yyyy-MM-dd');
+      await ScheduleService.toggleScheduleCompletion(
+        schedule.id,
+        dateStr,
+        !!schedule.is_routine,
+        !!schedule.is_completed
+      );
+      loadWeeklySchedules();
+    } catch (error) {
+      Alert.alert('오류', '상태를 변경하지 못했습니다.');
+    }
+  };
+
   const handleEditSchedule = (schedule: Schedule) => {
     setDetailVisible(false);
     setInitialValues({
@@ -293,6 +308,11 @@ export default function WeeklyScreen() {
         schedule={selectedSchedule}
         onDelete={handleDeleteSchedule}
         onEdit={handleEditSchedule}
+        onToggleCompletion={async (schedule) => {
+          await toggleCompletion(schedule);
+          // Update the selected schedule object in state to reflect the change in the modal
+          setSelectedSchedule(prev => prev ? { ...prev, is_completed: !prev.is_completed } : null);
+        }}
       />
     </View>
   );

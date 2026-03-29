@@ -346,6 +346,11 @@ export default function TodayScreen() {
         schedule={selectedSchedule}
         onDelete={handleDeleteSchedule}
         onEdit={handleEditSchedule}
+        onToggleCompletion={async (schedule) => {
+          await toggleCompletion(schedule);
+          // Update the selected schedule object in state to reflect the change in the modal
+          setSelectedSchedule(prev => prev ? { ...prev, is_completed: !prev.is_completed } : null);
+        }}
       />
 
       <RestoreRoutineModal

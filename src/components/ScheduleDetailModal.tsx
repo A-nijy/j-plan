@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback, Alert, Dimensions } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { Schedule } from '../types';
-import { X, Calendar, Clock, AlignLeft, Trash2, Edit2 } from 'lucide-react-native';
+import { X, Calendar, Clock, AlignLeft, Trash2, Edit2, Check } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ScheduleDetailModalProps {
@@ -10,6 +10,7 @@ interface ScheduleDetailModalProps {
   schedule: Schedule | null;
   onDelete: (schedule: Schedule) => void;
   onEdit: (schedule: Schedule) => void;
+  onToggleCompletion?: (schedule: Schedule) => void;
 }
 
 export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
@@ -18,6 +19,7 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
   schedule,
   onDelete,
   onEdit,
+  onToggleCompletion,
 }) => {
   const insets = useSafeAreaInsets();
   if (!schedule) return null;
@@ -37,6 +39,24 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
     );
   };
 
+  const getContrastColor = (hexcolor: string) => {
+    // If hexcolor is something like '#RGB', expand it to '#RRGGBB'
+    let color = hexcolor.replace('#', '');
+    if (color.length === 3) {
+      color = color.split('').map(char => char + char).join('');
+    }
+    
+    const r = parseInt(color.substr(0, 2), 16);
+    const g = parseInt(color.substr(2, 2), 16);
+    const b = parseInt(color.substr(4, 2), 16);
+    
+    // YIQ formula to determine brightness
+    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    return (yiq >= 128) ? '#000000' : '#ffffff';
+  };
+
+  const contrastColor = schedule.is_completed ? getContrastColor(schedule.color) : COLORS.text;
+
   return (
     <Modal
       visible={visible}
@@ -54,12 +74,13 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
               <View style={styles.header}>
                 <View style={styles.titleContainer}>
                   <View style={[styles.colorDot, { backgroundColor: schedule.color }]} />
-                  <Text style={styles.title} numberOfLines={2}>{schedule.title}</Text>
+                  <Text style={[styles.title, schedule.is_completed && styles.completedText]} numberOfLines={2}>{schedule.title}</Text>
                 </View>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <X color={COLORS.textSecondary} size={24} />
-                </TouchableOpacity>
-              </View>
+                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                   <X color={COLORS.textSecondary} size={24} />
+                 </TouchableOpacity>
+               </View>
+
 
               <ScrollView style={styles.content}>
                 <View style={styles.infoRow}>
@@ -85,6 +106,20 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
                   ]}>
                     {schedule.description || '(내용 없음)'}
                   </Text>
+                </View>
+
+                <View style={styles.completionSectionInside}>
+                  <TouchableOpacity 
+                    style={[styles.checkboxContainer, schedule.is_completed && { backgroundColor: schedule.color, borderColor: schedule.color }]}
+                    onPress={() => onToggleCompletion?.(schedule)}
+                  >
+                    <View style={[styles.checkbox, schedule.is_completed && { borderColor: contrastColor }]}>
+                      {schedule.is_completed && <Check size={16} color={contrastColor} strokeWidth={3} />}
+                    </View>
+                    <Text style={[styles.completionText, schedule.is_completed && { color: contrastColor, fontWeight: 'bold' }]}>
+                      {schedule.is_completed ? '수행 완료' : '미완료 (수행하려면 체크)'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </ScrollView>
 
@@ -158,8 +193,39 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.text,
   },
+  completedText: {
+    textDecorationLine: 'line-through',
+    opacity: 0.6,
+  },
   closeButton: {
     padding: 2,
+  },
+  completionSectionInside: {
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.sm + 2,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  completionText: {
+    fontSize: 15,
+    color: COLORS.text,
   },
   content: {
     padding: SPACING.md,
