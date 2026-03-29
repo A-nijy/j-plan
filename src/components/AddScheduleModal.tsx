@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity, ScrollView, Platform, FlatList, Dimensions, Alert, KeyboardAvoidingView } from 'react-native';
+import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity, ScrollView, Platform, FlatList, Dimensions, Alert, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { X, Clock, Check, Calendar, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -160,6 +160,24 @@ export default function AddScheduleModal({
   const [selectedDate, setSelectedDate] = useState(new Date());
   
   const [showPicker, setShowPicker] = useState<'start' | 'end' | 'date' | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showListener = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideListener = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showListener.remove();
+      hideListener.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -239,12 +257,22 @@ export default function AddScheduleModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <KeyboardAvoidingView 
-        style={styles.modalOverlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={[styles.modalContent, { paddingBottom: insets.bottom + SPACING.lg }]}>
+    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.modalBackdrop} />
+        </TouchableWithoutFeedback>
+        
+        <View style={[
+            styles.modalContent, 
+            { 
+              maxHeight: Dimensions.get('window').height - insets.top - SPACING.xl,
+              marginTop: insets.top + SPACING.lg,
+              paddingBottom: keyboardHeight > 0 
+                ? keyboardHeight - (Platform.OS === 'android' ? 0 : insets.bottom) 
+                : insets.bottom + SPACING.lg,
+            }
+          ]}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>
               {initialValues?.id ? '일정 수정' : '새 일정 추가'}
@@ -329,32 +357,32 @@ export default function AddScheduleModal({
               numberOfLines={3}
             />
           </ScrollView>
-
+            
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
             <Text style={styles.saveButtonText}>
               {initialValues?.id ? '변경 완료' : '일정 저장'}
             </Text>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-      
-      <DatePickerModal
-        visible={showPicker === 'date'}
-        onClose={() => setShowPicker(null)}
-        onSelect={setSelectedDate}
-        initialDate={selectedDate}
-      />
+      </View>
 
-      <TimePickerModal
-        visible={showPicker === 'start' || showPicker === 'end'}
-        onClose={() => setShowPicker(null)}
-        onConfirm={onConfirmTimePicker}
-        initialHour24={showPicker === 'start' ? startHour : endHour}
-        initialMinute={showPicker === 'start' ? startMin : endMin}
-        title={showPicker === 'start' ? '시작 시간 설정' : '종료 시간 설정'}
-      />
-    </Modal>
-  );
+    <DatePickerModal
+      visible={showPicker === 'date'}
+      onClose={() => setShowPicker(null)}
+      onSelect={setSelectedDate}
+      initialDate={selectedDate}
+    />
+
+    <TimePickerModal
+      visible={showPicker === 'start' || showPicker === 'end'}
+      onClose={() => setShowPicker(null)}
+      onConfirm={onConfirmTimePicker}
+      initialHour24={showPicker === 'start' ? startHour : endHour}
+      initialMinute={showPicker === 'start' ? startMin : endMin}
+      title={showPicker === 'start' ? '시작 시간 설정' : '종료 시간 설정'}
+    />
+  </Modal>
+);
 }
 
 const styles = StyleSheet.create({
@@ -363,12 +391,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  keyboardView: {
+    width: '100%',
+  },
   modalContent: {
     backgroundColor: COLORS.background,
     borderTopLeftRadius: BORDER_RADIUS.xl,
     borderTopRightRadius: BORDER_RADIUS.xl,
     padding: SPACING.xl,
-    maxHeight: '90%',
+    width: '100%',
   },
   header: {
     flexDirection: 'row',

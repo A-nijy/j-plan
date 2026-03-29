@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback, Dimensions } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { WeeklySettings, WeeklySettingsService } from '../services/WeeklySettingsService';
 import { X, Clock } from 'lucide-react-native';
@@ -51,9 +51,18 @@ export const WeeklySettingsModal: React.FC<WeeklySettingsModalProps> = ({ visibl
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={[styles.content, { paddingBottom: insets.bottom + SPACING.lg }]}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.backdrop} />
+        </TouchableWithoutFeedback>
+        <View style={[
+          styles.content, 
+          { 
+            paddingBottom: insets.bottom + SPACING.lg,
+            maxHeight: Dimensions.get('window').height - insets.top - SPACING.xl
+          }
+        ]}>
           <View style={styles.header}>
             <Text style={styles.title}>주간 시간표 설정</Text>
             <TouchableOpacity onPress={onClose}>
@@ -173,12 +182,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
   content: {
     backgroundColor: COLORS.background,
     borderTopLeftRadius: BORDER_RADIUS.lg,
     borderTopRightRadius: BORDER_RADIUS.lg,
-    maxHeight: '80%',
     padding: SPACING.lg,
+    width: '100%',
   },
   header: {
     flexDirection: 'row',

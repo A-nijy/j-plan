@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Dimensions, Keyboard } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { X, Clock, Check } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -52,7 +52,25 @@ export default function AddRoutineModal({ visible, onClose, onSave, initialData 
   const [endHour, setEndHour] = useState('10');
   const [endMin, setEndMin] = useState('00');
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
-  const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [selectedDays, setSelectedDays] = useState<number[]>(initialData?.days || []);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showListener = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideListener = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showListener.remove();
+      hideListener.remove();
+    };
+  }, []);
   
   const [showPicker, setShowPicker] = useState<'start' | 'end' | null>(null);
 
@@ -150,12 +168,22 @@ export default function AddRoutineModal({ visible, onClose, onSave, initialData 
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <KeyboardAvoidingView 
-        style={styles.modalOverlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={[styles.modalContent, { paddingBottom: insets.bottom + SPACING.lg }]}>
+    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.modalBackdrop} />
+        </TouchableWithoutFeedback>
+        
+        <View style={[
+            styles.modalContent, 
+            { 
+              maxHeight: Dimensions.get('window').height - insets.top - SPACING.xl,
+              marginTop: insets.top + SPACING.lg,
+              paddingBottom: keyboardHeight > 0 
+                ? keyboardHeight - (Platform.OS === 'android' ? 0 : insets.bottom) 
+                : insets.bottom + SPACING.lg,
+            }
+          ]}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>{initialData ? '루틴 수정' : '새 루틴 추가'}</Text>
             <TouchableOpacity onPress={onClose}>
@@ -249,17 +277,17 @@ export default function AddRoutineModal({ visible, onClose, onSave, initialData 
             <Text style={styles.saveButtonText}>루틴 저장</Text>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-      
-      <TimePickerModal
-        visible={showPicker !== null}
-        onClose={() => setShowPicker(null)}
-        onConfirm={onConfirmTimePicker}
-        initialHour24={showPicker === 'start' ? startHour : endHour}
-        initialMinute={showPicker === 'start' ? startMin : endMin}
-        title={showPicker === 'start' ? '시작 시간 설정' : '종료 시간 설정'}
-      />
-    </Modal>
+      </View>
+
+    <TimePickerModal
+      visible={showPicker !== null}
+      onClose={() => setShowPicker(null)}
+      onConfirm={onConfirmTimePicker}
+      initialHour24={showPicker === 'start' ? startHour : endHour}
+      initialMinute={showPicker === 'start' ? startMin : endMin}
+      title={showPicker === 'start' ? '시작 시간 설정' : '종료 시간 설정'}
+    />
+  </Modal>
   );
 }
 
@@ -269,12 +297,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  keyboardView: {
+    width: '100%',
+  },
   modalContent: {
     backgroundColor: COLORS.background,
     borderTopLeftRadius: BORDER_RADIUS.xl,
     borderTopRightRadius: BORDER_RADIUS.xl,
     padding: SPACING.xl,
-    maxHeight: '90%',
+    width: '100%',
   },
   header: {
     flexDirection: 'row',

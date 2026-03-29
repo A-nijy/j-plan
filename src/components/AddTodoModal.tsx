@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Dimensions, Keyboard } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +21,24 @@ export default function AddTodoModal({ visible, type, initialValues, onClose, on
   const insets = useSafeAreaInsets();
   const [content, setContent] = useState('');
   const [description, setDescription] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showListener = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideListener = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showListener.remove();
+      hideListener.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -54,12 +72,22 @@ export default function AddTodoModal({ visible, type, initialValues, onClose, on
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <KeyboardAvoidingView 
-        style={styles.modalOverlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={[styles.modalContent, { paddingBottom: insets.bottom + SPACING.lg }]}>
+    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.modalBackdrop} />
+        </TouchableWithoutFeedback>
+        
+        <View style={[
+          styles.modalContent, 
+          { 
+            maxHeight: Dimensions.get('window').height - insets.top - SPACING.xl,
+            marginTop: insets.top + SPACING.lg,
+            paddingBottom: keyboardHeight > 0 
+                ? keyboardHeight - (Platform.OS === 'android' ? 0 : insets.bottom) 
+                : insets.bottom + SPACING.lg,
+          }
+        ]}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>{getTitle()}</Text>
             <TouchableOpacity onPress={onClose}>
@@ -97,7 +125,7 @@ export default function AddTodoModal({ visible, type, initialValues, onClose, on
             <Text style={styles.saveButtonText}>{getButtonText()}</Text>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -108,12 +136,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  keyboardView: {
+    width: '100%',
+  },
   modalContent: {
     backgroundColor: COLORS.surface,
     borderTopLeftRadius: BORDER_RADIUS.lg,
     borderTopRightRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
-    paddingBottom: SPACING.xl,
+    width: '100%',
   },
   header: {
     flexDirection: 'row',

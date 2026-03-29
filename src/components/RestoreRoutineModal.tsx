@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Modal, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, Text, View, Modal, TouchableOpacity, FlatList, ActivityIndicator, Alert, TouchableWithoutFeedback, Dimensions } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { X, RotateCcw, Clock, AlertCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -91,9 +91,15 @@ export default function RestoreRoutineModal({ visible, onClose, date, onRestored
   );
 
   return (
-    <Modal visible={visible} animationType="fade" transparent>
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.backdrop} />
+        </TouchableWithoutFeedback>
+        <View style={[
+          styles.modalContent, 
+          { maxHeight: Dimensions.get('window').height - insets.top - insets.bottom - SPACING.xl * 2 }
+        ]}>
           <View style={styles.header}>
             <View style={styles.headerTitleContainer}>
               <RotateCcw size={20} color={COLORS.text} style={{ marginRight: 8 }} />
@@ -134,11 +140,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: SPACING.lg,
   },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
   modalContent: {
     backgroundColor: COLORS.background,
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.xl,
-    maxHeight: '80%',
+    width: '100%',
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },

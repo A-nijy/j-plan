@@ -1,8 +1,8 @@
-import React from 'react';
-import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback, Alert } from 'react-native';
+import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback, Alert, Dimensions } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { RoutineTemplate } from '../types';
 import { X, Clock, AlignLeft, BarChart2 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface RoutineDetailModalProps {
   visible: boolean;
@@ -21,6 +21,7 @@ export const RoutineDetailModal: React.FC<RoutineDetailModalProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const insets = useSafeAreaInsets();
   if (!routine) return null;
 
   return (
@@ -33,7 +34,10 @@ export const RoutineDetailModal: React.FC<RoutineDetailModalProps> = ({
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
-            <View style={styles.modalContainer}>
+            <View style={[
+              styles.modalContainer, 
+              { maxHeight: Dimensions.get('window').height - insets.top - insets.bottom - SPACING.xl * 2 }
+            ]}>
               <View style={styles.header}>
                 <View style={styles.titleContainer}>
                   <View style={[styles.colorBar, { backgroundColor: routine.color }]} />

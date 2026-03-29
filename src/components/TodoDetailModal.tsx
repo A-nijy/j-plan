@@ -1,7 +1,7 @@
-import React from 'react';
-import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback } from 'react-native';
+import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback, Dimensions } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { X, CheckCircle2, Circle, Edit3, AlignLeft, Type } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface TodoDetailModalProps {
   visible: boolean;
@@ -22,6 +22,7 @@ export const TodoDetailModal: React.FC<TodoDetailModalProps> = ({
   todo,
   onEdit,
 }) => {
+  const insets = useSafeAreaInsets();
   if (!todo) return null;
 
   return (
@@ -34,7 +35,10 @@ export const TodoDetailModal: React.FC<TodoDetailModalProps> = ({
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
-            <View style={styles.modalContainer}>
+            <View style={[
+              styles.modalContainer, 
+              { maxHeight: Dimensions.get('window').height - insets.top - insets.bottom - SPACING.xl * 2 }
+            ]}>
               <View style={styles.header}>
                 <View style={styles.titleContainer}>
                   <Text style={styles.title} numberOfLines={2}>할 일 상세</Text>

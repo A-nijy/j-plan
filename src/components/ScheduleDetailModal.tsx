@@ -1,8 +1,8 @@
-import React from 'react';
-import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback, Alert } from 'react-native';
+import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback, Alert, Dimensions } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { Schedule } from '../types';
 import { X, Calendar, Clock, AlignLeft, Trash2, Edit2 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ScheduleDetailModalProps {
   visible: boolean;
@@ -19,6 +19,7 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
   onDelete,
   onEdit,
 }) => {
+  const insets = useSafeAreaInsets();
   if (!schedule) return null;
 
   const handleDeletePress = () => {
@@ -46,7 +47,10 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
-            <View style={styles.modalContainer}>
+            <View style={[
+              styles.modalContainer, 
+              { maxHeight: Dimensions.get('window').height - insets.top - insets.bottom - SPACING.xl * 2 }
+            ]}>
               <View style={styles.header}>
                 <View style={styles.titleContainer}>
                   <View style={[styles.colorDot, { backgroundColor: schedule.color }]} />
