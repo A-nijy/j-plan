@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
   },
   headerTitle: {
     fontSize: 20,
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   form: {
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
   },
   inputGroup: {
     marginBottom: SPACING.md,

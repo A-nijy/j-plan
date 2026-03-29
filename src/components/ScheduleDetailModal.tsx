@@ -162,12 +162,12 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   content: {
-    padding: SPACING.lg,
+    padding: SPACING.md,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
   },
   icon: {
     marginRight: 16,

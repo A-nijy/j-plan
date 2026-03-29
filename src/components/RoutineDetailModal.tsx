@@ -207,13 +207,13 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   footer: {
-    padding: SPACING.lg,
+    padding: SPACING.md,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
   editButton: {
     backgroundColor: COLORS.primary,
-    paddingVertical: 14,
+    paddingVertical: 10,
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -221,6 +221,6 @@ const styles = StyleSheet.create({
   editButtonText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
 });

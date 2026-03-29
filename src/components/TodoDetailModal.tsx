@@ -177,14 +177,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   footer: {
-    padding: SPACING.lg,
+    padding: SPACING.md,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
   editButton: {
     flexDirection: 'row',
     backgroundColor: COLORS.primary,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',

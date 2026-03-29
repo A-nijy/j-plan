@@ -307,14 +307,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     borderTopLeftRadius: BORDER_RADIUS.xl,
     borderTopRightRadius: BORDER_RADIUS.xl,
-    padding: SPACING.xl,
+    padding: SPACING.lg,
     width: '100%',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
   },
   headerTitle: {
     fontSize: 20,
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   form: {
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
   },
   label: {
     fontSize: 14,
@@ -407,12 +407,12 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.lg,
+    padding: SPACING.md,
     alignItems: 'center',
   },
   saveButtonText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });
