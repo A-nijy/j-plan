@@ -1,7 +1,9 @@
+import React from 'react';
 import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback, Dimensions } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { SPACING, BORDER_RADIUS } from '../constants/theme';
 import { X, CheckCircle2, Circle, Edit3, AlignLeft, Type } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../context/ThemeContext';
 
 interface TodoDetailModalProps {
   visible: boolean;
@@ -23,6 +25,8 @@ export const TodoDetailModal: React.FC<TodoDetailModalProps> = ({
   onEdit,
 }) => {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+
   if (!todo) return null;
 
   return (
@@ -37,14 +41,17 @@ export const TodoDetailModal: React.FC<TodoDetailModalProps> = ({
           <TouchableWithoutFeedback>
             <View style={[
               styles.modalContainer, 
-              { maxHeight: Dimensions.get('window').height - insets.top - insets.bottom - SPACING.xl * 2 }
+              { 
+                backgroundColor: colors.surface,
+                maxHeight: Dimensions.get('window').height - insets.top - insets.bottom - SPACING.xl * 2 
+              }
             ]}>
-              <View style={styles.header}>
+              <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <View style={styles.titleContainer}>
-                  <Text style={styles.title} numberOfLines={2}>할 일 상세</Text>
+                  <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>할 일 상세</Text>
                 </View>
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <X color={COLORS.textSecondary} size={24} />
+                  <X color={colors.textSecondary} size={24} />
                 </TouchableOpacity>
               </View>
 
@@ -52,17 +59,18 @@ export const TodoDetailModal: React.FC<TodoDetailModalProps> = ({
 
                 <View style={[styles.contentSection, { marginBottom: SPACING.xl }]}>
                   <View style={styles.infoRow}>
-                    <Type size={20} color={COLORS.primary} style={styles.icon} />
-                    <Text style={[styles.contentText, { fontWeight: '700' }]}>{todo.content}</Text>
+                    <Type size={20} color={colors.primary} style={styles.icon} />
+                    <Text style={[styles.contentText, { color: colors.text, fontWeight: '700' }]}>{todo.content}</Text>
                   </View>
                 </View>
 
                 <View style={styles.contentSection}>
                   <View style={styles.infoRow}>
-                    <AlignLeft size={20} color={COLORS.primary} style={styles.icon} />
+                    <AlignLeft size={20} color={colors.primary} style={styles.icon} />
                     <Text style={[
                       styles.contentText, 
-                      !todo.description && { color: COLORS.textSecondary, fontStyle: 'italic' }
+                      { color: colors.text },
+                      !todo.description && { color: colors.textSecondary, fontStyle: 'italic' }
                     ]}>
                       {todo.description || '(내용 없음)'}
                     </Text>
@@ -70,9 +78,9 @@ export const TodoDetailModal: React.FC<TodoDetailModalProps> = ({
                 </View>
               </ScrollView>
 
-              <View style={styles.footer}>
+              <View style={[styles.footer, { borderTopColor: colors.border }]}>
                 <TouchableOpacity 
-                  style={styles.editButton}
+                  style={[styles.editButton, { backgroundColor: colors.primary }]}
                   onPress={() => {
                     onEdit(todo.id, todo.content, todo.description);
                     onClose();
@@ -100,7 +108,6 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     width: '100%',
-    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.lg,
     maxHeight: '70%',
     overflow: 'hidden',
@@ -116,7 +123,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: SPACING.lg,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   titleContainer: {
     flex: 1,
@@ -124,40 +130,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: COLORS.text,
   },
   closeButton: {
     padding: 2,
   },
   content: {
     padding: SPACING.lg,
-  },
-  statusSection: {
-    marginBottom: SPACING.lg,
-  },
-  statusToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  statusInfo: {
-    marginLeft: SPACING.md,
-  },
-  statusLabel: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-  },
-  statusValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginBottom: SPACING.lg,
   },
   contentSection: {
     marginBottom: SPACING.xl,
@@ -172,18 +150,15 @@ const styles = StyleSheet.create({
   },
   contentText: {
     fontSize: 17,
-    color: COLORS.text,
     lineHeight: 24,
     flex: 1,
   },
   footer: {
     padding: SPACING.md,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
   },
   editButton: {
     flexDirection: 'row',
-    backgroundColor: COLORS.primary,
     paddingVertical: 10,
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',

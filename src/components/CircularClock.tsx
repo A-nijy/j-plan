@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import Svg, { Path, Circle, G, Text as SvgText } from 'react-native-svg';
-import { COLORS } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 const SIZE = width * 0.8;
@@ -47,11 +47,18 @@ const describeArc = (x: number, y: number, radius: number, startAngle: number, e
 };
 
 export const CircularClock: React.FC<CircularClockProps> = ({ data = [], progress = 0 }) => {
+  const { colors } = useTheme();
   const hourToAngle = (hour: number) => (hour / 24) * 360;
   const INNER_CIRCLE_RADIUS = 35;
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container, 
+      { 
+        backgroundColor: colors.surface,
+        shadowColor: colors.text
+      }
+    ]}>
       <Svg width={SIZE} height={SIZE}>
         <G>
           {/* Background Circle */}
@@ -59,8 +66,8 @@ export const CircularClock: React.FC<CircularClockProps> = ({ data = [], progres
             cx={CENTER}
             cy={CENTER}
             r={RADIUS}
-            fill={COLORS.surface}
-            stroke={COLORS.border}
+            fill={colors.surface}
+            stroke={colors.border}
             strokeWidth="1"
           />
           
@@ -75,14 +82,14 @@ export const CircularClock: React.FC<CircularClockProps> = ({ data = [], progres
               <G key={i}>
                 <Path
                   d={`M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`}
-                  stroke={COLORS.border}
+                  stroke={colors.border}
                   strokeWidth={i % 6 === 0 ? "2" : "1"}
                 />
                 {i % 3 === 0 && (
                   <SvgText
                     x={textPos.x}
                     y={textPos.y + 5}
-                    fill={COLORS.textSecondary}
+                    fill={colors.textSecondary}
                     fontSize="10"
                     textAnchor="middle"
                   >
@@ -99,34 +106,29 @@ export const CircularClock: React.FC<CircularClockProps> = ({ data = [], progres
             const endAngle = hourToAngle(item.endHour);
             const diff = (item.endHour - item.startHour + 24) % 24;
 
-            // Helper to calculate text position and wrapping
             const getLabelInfo = () => {
               const middleHour = (item.startHour + (diff / 2)) % 24;
               const middleAngle = hourToAngle(middleHour);
               const textRadius = (INNER_CIRCLE_RADIUS + RADIUS) / 2 + 5;
               const pos = polarToCartesian(CENTER, CENTER, textRadius, middleAngle);
               
-              // 1 hour arc at this radius is roughly 18-20px wide at narrowest point
-              // Using a more conservative factor (3.2 instead of 3.8)
               const charsPerLine = Math.floor(diff * 3.2); 
               let lines: string[] = [];
               const label = item.label;
 
-              if (diff >= 1.5 && label.length > charsPerLine) { // More than 1.5 hours and needs wrap
+              if (diff >= 1.5 && label.length > charsPerLine) {
                 lines.push(label.substring(0, charsPerLine));
                 const secondLine = label.substring(charsPerLine);
-                // Truncate second line if still too long
                 lines.push(secondLine.length > charsPerLine ? secondLine.substring(0, Math.max(0, charsPerLine - 1)) + '..' : secondLine);
-              } else { // Single line (either short duration or short text)
+              } else {
                 lines.push(label.length > charsPerLine ? label.substring(0, Math.max(0, charsPerLine - 1)) + '..' : label);
               }
               
-              return { pos, lines, visible: diff >= 0.6 }; // Show text for 36+ minutes
+              return { pos, lines, visible: diff >= 0.6 };
             };
 
             const labelInfo = getLabelInfo();
 
-            // If it's a 24-hour event, render a Circle
             if (diff >= 23.99) {
               return (
                 <G key={index}>
@@ -180,15 +182,15 @@ export const CircularClock: React.FC<CircularClockProps> = ({ data = [], progres
             cx={CENTER}
             cy={CENTER}
             r={INNER_CIRCLE_RADIUS}
-            fill={COLORS.surface}
-            stroke={COLORS.border}
+            fill={colors.surface}
+            stroke={colors.border}
             strokeWidth="1"
           />
           
           <SvgText
             x={CENTER}
             y={CENTER + 6}
-            fill={COLORS.primary}
+            fill={colors.primary}
             fontSize="18"
             fontWeight="bold"
             textAnchor="middle"
@@ -205,10 +207,8 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.surface,
     borderRadius: SIZE / 2,
     elevation: 4,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,

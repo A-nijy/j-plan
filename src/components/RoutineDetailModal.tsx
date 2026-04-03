@@ -1,8 +1,10 @@
+import React from 'react';
 import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback, Alert, Dimensions } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { SPACING, BORDER_RADIUS } from '../constants/theme';
 import { RoutineTemplate } from '../types';
 import { X, Clock, AlignLeft, BarChart2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../context/ThemeContext';
 
 interface RoutineDetailModalProps {
   visible: boolean;
@@ -22,6 +24,7 @@ export const RoutineDetailModal: React.FC<RoutineDetailModalProps> = ({
   onDelete,
 }) => {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   if (!routine) return null;
 
   return (
@@ -36,33 +39,34 @@ export const RoutineDetailModal: React.FC<RoutineDetailModalProps> = ({
           <TouchableWithoutFeedback>
             <View style={[
               styles.modalContainer, 
+              { backgroundColor: colors.surface },
               { maxHeight: Dimensions.get('window').height - insets.top - insets.bottom - SPACING.xl * 2 }
             ]}>
-              <View style={styles.header}>
+              <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <View style={styles.titleContainer}>
                   <View style={[styles.colorBar, { backgroundColor: routine.color }]} />
-                  <Text style={styles.title} numberOfLines={2}>{routine.title}</Text>
+                  <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>{routine.title}</Text>
                 </View>
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <X color={COLORS.textSecondary} size={24} />
+                  <X color={colors.textSecondary} size={24} />
                 </TouchableOpacity>
               </View>
 
               <ScrollView style={styles.content}>
                 <View style={styles.infoRow}>
-                  <Clock size={20} color={COLORS.primary} style={styles.icon} />
+                  <Clock size={20} color={colors.primary} style={styles.icon} />
                   <View>
-                    <Text style={styles.label}>시간 정보</Text>
-                    <Text style={styles.value}>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>시간 정보</Text>
+                    <Text style={[styles.value, { color: colors.text }]}>
                       {routine.start_time} - {routine.end_time}
                     </Text>
                   </View>
                 </View>
 
                 <View style={styles.infoRow}>
-                  <BarChart2 size={20} color={COLORS.primary} style={styles.icon} />
+                  <BarChart2 size={20} color={colors.primary} style={styles.icon} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>적용 요일</Text>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>적용 요일</Text>
                     <View style={styles.daysContainer}>
                       {DAY_LABELS.map((label, idx) => {
                         const isActive = routine.days.includes(idx);
@@ -71,10 +75,11 @@ export const RoutineDetailModal: React.FC<RoutineDetailModalProps> = ({
                             key={idx} 
                             style={[
                               styles.dayBadge, 
+                              { backgroundColor: colors.background },
                               isActive && { backgroundColor: routine.color + '20', borderColor: routine.color }
                             ]}
                           >
-                            <Text style={[styles.dayBadgeText, isActive && { color: COLORS.text, fontWeight: 'bold' }]}>
+                            <Text style={[styles.dayBadgeText, { color: colors.textSecondary }, isActive && { color: colors.text, fontWeight: 'bold' }]}>
                               {label}
                             </Text>
                           </View>
@@ -85,13 +90,13 @@ export const RoutineDetailModal: React.FC<RoutineDetailModalProps> = ({
                 </View>
 
                 <View style={[styles.infoRow, { alignItems: 'flex-start' }]}>
-                  <AlignLeft size={20} color={COLORS.primary} style={styles.icon} />
+                  <AlignLeft size={20} color={colors.primary} style={styles.icon} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>설명</Text>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>설명</Text>
                     <Text style={[
                       styles.value, 
-                      { fontWeight: 'normal' },
-                      !routine.description && { color: COLORS.textSecondary, fontStyle: 'italic' }
+                      { color: colors.text, fontWeight: 'normal' },
+                      !routine.description && { color: colors.textSecondary, fontStyle: 'italic' }
                     ]}>
                       {routine.description || '(내용 없음)'}
                     </Text>
@@ -99,9 +104,9 @@ export const RoutineDetailModal: React.FC<RoutineDetailModalProps> = ({
                 </View>
               </ScrollView>
 
-              <View style={styles.footer}>
+              <View style={[styles.footer, { borderTopColor: colors.border }]}>
                 <TouchableOpacity 
-                  style={styles.editButton}
+                  style={[styles.editButton, { backgroundColor: colors.primary }]}
                   onPress={() => onEdit(routine)}
                 >
                   <Text style={styles.editButtonText}>루틴 변경</Text>
@@ -125,9 +130,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     width: '100%',
-    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.xl,
-    maxHeight: '80%',
     overflow: 'hidden',
     elevation: 8,
     shadowColor: '#000',
@@ -141,7 +144,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     padding: SPACING.lg,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   titleContainer: {
     flex: 1,
@@ -158,7 +160,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: COLORS.text,
   },
   closeButton: {
     padding: 2,
@@ -176,12 +177,10 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    color: COLORS.textSecondary,
     marginBottom: 4,
   },
   value: {
     fontSize: 17,
-    color: COLORS.text,
     fontWeight: '600',
     lineHeight: 24,
   },
@@ -200,19 +199,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     borderWidth: 1,
     borderColor: 'transparent',
-    backgroundColor: COLORS.background,
   },
   dayBadgeText: {
     fontSize: 12,
-    color: COLORS.textSecondary,
   },
   footer: {
     padding: SPACING.md,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
   },
   editButton: {
-    backgroundColor: COLORS.primary,
     paddingVertical: 10,
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',

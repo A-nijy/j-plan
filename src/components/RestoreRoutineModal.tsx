@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Modal, TouchableOpacity, FlatList, ActivityIndicator, Alert, TouchableWithoutFeedback, Dimensions } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { SPACING, BORDER_RADIUS } from '../constants/theme';
 import { X, RotateCcw, Clock, AlertCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoutineService } from '../services/RoutineService';
 import { ScheduleService } from '../services/ScheduleService';
+import { useTheme } from '../context/ThemeContext';
 
 interface RestoreRoutineModalProps {
   visible: boolean;
@@ -15,6 +16,7 @@ interface RestoreRoutineModalProps {
 
 export default function RestoreRoutineModal({ visible, onClose, date, onRestored }: RestoreRoutineModalProps) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const [deletedRoutines, setDeletedRoutines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,7 +40,6 @@ export default function RestoreRoutineModal({ visible, onClose, date, onRestored
 
   const handleRestore = async (routine: any) => {
     try {
-      // 1. Conflict Check
       const conflict = await ScheduleService.checkConflictForRestore(routine.id, date);
       
       if (conflict.hasOverlap && 'conflictingItem' in conflict) {
@@ -51,12 +52,10 @@ export default function RestoreRoutineModal({ visible, onClose, date, onRestored
         return;
       }
 
-      // 2. Restore
       await RoutineService.restoreRoutineForDate(routine.id, date);
       Alert.alert('성공', `"${routine.title}" 루틴이 복구되었습니다.`);
       
       onRestored();
-      // Remove from local list
       setDeletedRoutines(prev => prev.filter(r => r.id !== routine.id));
       
       if (deletedRoutines.length <= 1) {
@@ -69,22 +68,22 @@ export default function RestoreRoutineModal({ visible, onClose, date, onRestored
   };
 
   const renderItem = ({ item }: { item: any }) => (
-    <View style={styles.routineCard}>
+    <View style={[styles.routineCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={[styles.colorBar, { backgroundColor: item.color }]} />
       <View style={styles.cardContent}>
         <View style={styles.cardInfo}>
-          <Text style={styles.routineTitle}>{item.title}</Text>
+          <Text style={[styles.routineTitle, { color: colors.text }]}>{item.title}</Text>
           <View style={styles.timeRow}>
-            <Clock size={14} color={COLORS.textSecondary} />
-            <Text style={styles.timeText}>{item.start_time} - {item.end_time}</Text>
+            <Clock size={14} color={colors.textSecondary} />
+            <Text style={[styles.timeText, { color: colors.textSecondary }]}>{item.start_time} - {item.end_time}</Text>
           </View>
         </View>
         <TouchableOpacity 
-          style={styles.restoreButton}
+          style={[styles.restoreButton, { backgroundColor: colors.primary + '15' }]}
           onPress={() => handleRestore(item)}
         >
-          <RotateCcw size={18} color={COLORS.primary} />
-          <Text style={styles.restoreButtonText}>복구</Text>
+          <RotateCcw size={18} color={colors.primary} />
+          <Text style={[styles.restoreButtonText, { color: colors.primary }]}>복구</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -98,26 +97,27 @@ export default function RestoreRoutineModal({ visible, onClose, date, onRestored
         </TouchableWithoutFeedback>
         <View style={[
           styles.modalContent, 
+          { backgroundColor: colors.background },
           { maxHeight: Dimensions.get('window').height - insets.top - insets.bottom - SPACING.xl * 2 }
         ]}>
           <View style={styles.header}>
             <View style={styles.headerTitleContainer}>
-              <RotateCcw size={20} color={COLORS.text} style={{ marginRight: 8 }} />
-              <Text style={styles.headerTitle}>삭제된 루틴 복구</Text>
+              <RotateCcw size={20} color={colors.text} style={{ marginRight: 8 }} />
+              <Text style={[styles.headerTitle, { color: colors.text }]}>삭제된 루틴 복구</Text>
             </View>
             <TouchableOpacity onPress={onClose}>
-              <X color={COLORS.text} size={24} />
+              <X color={colors.text} size={24} />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.subtitle}>{date}에 '오늘만 삭제'한 루틴 목록입니다.</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{date}에 '오늘만 삭제'한 루틴 목록입니다.</Text>
 
           {loading ? (
-            <ActivityIndicator style={{ padding: 40 }} color={COLORS.primary} />
+            <ActivityIndicator style={{ padding: 40 }} color={colors.primary} />
           ) : deletedRoutines.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <AlertCircle size={40} color={COLORS.textSecondary} opacity={0.3} />
-              <Text style={styles.emptyText}>삭제된 루틴이 없습니다.</Text>
+              <AlertCircle size={40} color={colors.textSecondary} style={{ opacity: 0.3 }} />
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>삭제된 루틴이 없습니다.</Text>
             </View>
           ) : (
             <FlatList
@@ -144,7 +144,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   modalContent: {
-    backgroundColor: COLORS.background,
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.xl,
     width: '100%',
@@ -167,11 +166,9 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: COLORS.text,
   },
   subtitle: {
     fontSize: 14,
-    color: COLORS.textSecondary,
     marginBottom: SPACING.lg,
   },
   listContent: {
@@ -179,12 +176,10 @@ const styles = StyleSheet.create({
   },
   routineCard: {
     flexDirection: 'row',
-    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
     marginBottom: SPACING.md,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   colorBar: {
     width: 4,
@@ -202,7 +197,6 @@ const styles = StyleSheet.create({
   routineTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.text,
     marginBottom: 4,
   },
   timeRow: {
@@ -211,7 +205,6 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 13,
-    color: COLORS.textSecondary,
     marginLeft: 4,
   },
   restoreButton: {
@@ -220,10 +213,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.primary + '15',
   },
   restoreButtonText: {
-    color: COLORS.primary,
     fontWeight: 'bold',
     fontSize: 13,
     marginLeft: 4,
@@ -236,6 +227,5 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 12,
     fontSize: 14,
-    color: COLORS.textSecondary,
   },
 });

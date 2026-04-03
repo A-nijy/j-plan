@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Modal, TouchableOpacity } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
+import { SPACING, BORDER_RADIUS } from '../../constants/theme';
 import WheelPicker from 'react-native-wheely';
+import { useTheme } from '../../context/ThemeContext';
 
 interface TimePickerModalProps {
   visible: boolean;
@@ -16,6 +17,7 @@ const HOURS_24 = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '
 const MINUTES_60 = Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0'));
 
 export const TimePickerModal = ({ visible, onClose, onConfirm, initialHour24, initialMinute, title }: TimePickerModalProps) => {
+  const { colors } = useTheme();
   const [hour24, setHour24] = useState('09');
   const [minute, setMinute] = useState('00');
   const [nonce, setNonce] = useState(0);
@@ -41,8 +43,8 @@ export const TimePickerModal = ({ visible, onClose, onConfirm, initialHour24, in
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.pickerOverlay}>
-        <View style={styles.pickerContent}>
-          <Text style={styles.pickerTitle}>{title}</Text>
+        <View style={[styles.pickerContent, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.pickerTitle, { color: colors.text }]}>{title}</Text>
           <View style={styles.pickerRow}>
             <View style={{ width: 80 }}>
               <WheelPicker
@@ -50,29 +52,29 @@ export const TimePickerModal = ({ visible, onClose, onConfirm, initialHour24, in
                 selectedIndex={hourIdx}
                 options={HOURS_24}
                 onChange={(index) => setHour24(HOURS_24[index])}
-                itemTextStyle={styles.wheelItemText}
-                selectedIndicatorStyle={styles.wheelIndicator}
+                itemTextStyle={StyleSheet.flatten([styles.wheelItemText, { color: colors.text }])}
+                selectedIndicatorStyle={StyleSheet.flatten([styles.wheelIndicator, { borderColor: colors.border }])}
                 itemHeight={44}
               />
             </View>
-            <Text style={styles.separator}>:</Text>
+            <Text style={[styles.separator, { color: colors.text }]}>:</Text>
             <View style={{ width: 80 }}>
               <WheelPicker
                 key={`min-${nonce}`}
                 selectedIndex={minIdx}
                 options={MINUTES_60}
                 onChange={(index) => setMinute(MINUTES_60[index])}
-                itemTextStyle={styles.wheelItemText}
-                selectedIndicatorStyle={styles.wheelIndicator}
+                itemTextStyle={StyleSheet.flatten([styles.wheelItemText, { color: colors.text }])}
+                selectedIndicatorStyle={StyleSheet.flatten([styles.wheelIndicator, { borderColor: colors.border }])}
                 itemHeight={44}
               />
             </View>
           </View>
           <View style={styles.buttonRow}>
             <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelButtonText}>취소</Text>
+              <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>취소</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.confirmButtonSmall} onPress={handleConfirm}>
+            <TouchableOpacity style={[styles.confirmButtonSmall, { backgroundColor: colors.primary }]} onPress={handleConfirm}>
               <Text style={styles.confirmButtonText}>확인</Text>
             </TouchableOpacity>
           </View>
@@ -90,7 +92,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pickerContent: {
-    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.xl,
     width: '85%',
@@ -100,7 +101,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: SPACING.xl,
     textAlign: 'center',
-    color: COLORS.text,
   },
   pickerRow: {
     flexDirection: 'row',
@@ -110,18 +110,15 @@ const styles = StyleSheet.create({
   },
   wheelItemText: {
     fontSize: 18,
-    color: COLORS.text,
   },
   wheelIndicator: {
     backgroundColor: 'transparent',
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: COLORS.border,
   },
   separator: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: COLORS.text,
     marginHorizontal: 10,
   },
   buttonRow: {
@@ -136,13 +133,11 @@ const styles = StyleSheet.create({
   },
   confirmButtonSmall: {
     flex: 1,
-    backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: COLORS.textSecondary,
     fontSize: 16,
     fontWeight: '600',
   },

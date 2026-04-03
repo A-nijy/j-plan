@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, Dimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
+import { SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { WeeklyGrid } from '../../src/components/WeeklyGrid';
 import { ScheduleService } from '../../src/services/ScheduleService';
 import { Schedule } from '../../src/types';
@@ -13,8 +13,10 @@ import { WeeklySettingsService, WeeklySettings } from '../../src/services/Weekly
 import { WeeklySettingsModal } from '../../src/components/WeeklySettingsModal';
 import { ScheduleDetailModal } from '../../src/components/ScheduleDetailModal';
 import Svg, { Circle } from 'react-native-svg';
+import { useTheme } from '../../src/context/ThemeContext';
 
 export default function WeeklyScreen() {
+  const { colors } = useTheme();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [initialValues, setInitialValues] = useState<any>(null);
@@ -162,10 +164,10 @@ export default function WeeklyScreen() {
     const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
     return (
-      <View style={styles.calendarGridContainer}>
+      <View style={[styles.calendarGridContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.calendarGridHeader}>
           {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
-            <Text key={i} style={[styles.gridHeaderText, i === 0 && { color: '#FFADAD' }, i === 6 && { color: '#A0C4FF' }]}>
+            <Text key={i} style={[styles.gridHeaderText, { color: colors.textSecondary }, i === 0 && { color: '#FFADAD' }, i === 6 && { color: '#A0C4FF' }]}>
               {d}
             </Text>
           ))}
@@ -184,8 +186,8 @@ export default function WeeklyScreen() {
                 key={i} 
                 style={[
                   styles.dayCell, 
-                  isSelectedWeek && styles.selectedWeekCell,
-                  isToday && styles.todayCell
+                  isSelectedWeek && [styles.selectedWeekCell, { backgroundColor: colors.primary + '15' }],
+                  isToday && [styles.todayCell, { backgroundColor: colors.primary }]
                 ]}
                 onPress={() => {
                   setCurrentWeekStart(startOfWeek(date, { weekStartsOn: 1 }));
@@ -199,7 +201,7 @@ export default function WeeklyScreen() {
                         cx={14}
                         cy={14}
                         r={12}
-                        stroke={isToday ? 'rgba(255,255,255,0.3)' : COLORS.border + '30'}
+                        stroke={isToday ? 'rgba(255,255,255,0.3)' : colors.border + '30'}
                         strokeWidth="2.5"
                         fill="transparent"
                       />
@@ -207,7 +209,7 @@ export default function WeeklyScreen() {
                         cx={14}
                         cy={14}
                         r={12}
-                        stroke={isToday ? '#FFF' : (stat.completed === stat.total ? COLORS.primary : COLORS.primary + '80')}
+                        stroke={isToday ? '#FFF' : (stat.completed === stat.total ? colors.primary : colors.primary + '80')}
                         strokeWidth="2.5"
                         fill="transparent"
                         strokeDasharray={2 * Math.PI * 12}
@@ -220,9 +222,10 @@ export default function WeeklyScreen() {
                 )}
                 <Text style={[
                   styles.dayCellText, 
-                  !isCurrentMonth && styles.otherMonthText,
-                  isSelectedWeek && styles.selectedWeekText,
-                  isToday && styles.todayCellText
+                  { color: colors.text },
+                  !isCurrentMonth && [styles.otherMonthText, { color: colors.border }],
+                  isSelectedWeek && [styles.selectedWeekText, { color: colors.primary }],
+                  isToday && [styles.todayCellText, { color: colors.surface }]
                 ]}>
                   {format(date, 'd')}
                 </Text>
@@ -235,26 +238,29 @@ export default function WeeklyScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.calendarNav}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.calendarNav, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View>
-          <Text style={styles.yearText}>{format(currentWeekStart, 'yyyy년')}</Text>
+          <Text style={[styles.yearText, { color: colors.textSecondary }]}>{format(currentWeekStart, 'yyyy년')}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={styles.monthText}>{format(currentWeekStart, 'MMMM', { locale: ko })}</Text>
+            <Text style={[styles.monthText, { color: colors.text }]}>{format(currentWeekStart, 'MMMM', { locale: ko })}</Text>
             <TouchableOpacity onPress={() => setSettingsVisible(true)}>
-              <Settings color={COLORS.textSecondary} size={18} />
+              <Settings color={colors.textSecondary} size={18} />
             </TouchableOpacity>
           </View>
         </View>
         <View style={styles.navButtons}>
-          <TouchableOpacity style={styles.navBtn} onPress={() => moveWeek(-1)}>
-            <ChevronLeft color={COLORS.text} size={24} />
+          <TouchableOpacity style={[styles.navBtn, { backgroundColor: colors.background }]} onPress={() => moveWeek(-1)}>
+            <ChevronLeft color={colors.text} size={24} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.todayBtn} onPress={() => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}>
-            <Text style={styles.todayBtnText}>이번 주</Text>
+          <TouchableOpacity 
+            style={[styles.todayBtn, { backgroundColor: colors.primary + '15' }]} 
+            onPress={() => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}
+          >
+            <Text style={[styles.todayBtnText, { color: colors.primary }]}>이번 주</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navBtn} onPress={() => moveWeek(1)}>
-            <ChevronRight color={COLORS.text} size={24} />
+          <TouchableOpacity style={[styles.navBtn, { backgroundColor: colors.background }]} onPress={() => moveWeek(1)}>
+            <ChevronRight color={colors.text} size={24} />
           </TouchableOpacity>
         </View>
       </View>
@@ -271,14 +277,14 @@ export default function WeeklyScreen() {
       )}
       
       <TouchableOpacity 
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: colors.primary }]}
         onPress={() => {
           setInitialValues(null);
           setSelectedDay(new Date().getDay());
           setModalVisible(true);
         }}
       >
-        <Text style={styles.fabText}>+</Text>
+        <Text style={[styles.fabText, { color: colors.surface }]}>+</Text>
       </TouchableOpacity>
 
       <AddScheduleModal
@@ -321,7 +327,6 @@ export default function WeeklyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   calendarNav: {
     flexDirection: 'row',
@@ -329,18 +334,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
-    backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   yearText: {
     fontSize: 12,
-    color: COLORS.textSecondary,
     fontWeight: '500',
   },
   monthText: {
     fontSize: 20,
-    color: COLORS.text,
     fontWeight: 'bold',
   },
   navButtons: {
@@ -351,25 +352,20 @@ const styles = StyleSheet.create({
   navBtn: {
     padding: SPACING.xs,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.background,
   },
   todayBtn: {
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.xs + 2,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.primary + '15',
   },
   todayBtnText: {
     fontSize: 12,
-    color: COLORS.primary,
     fontWeight: 'bold',
   },
   calendarGridContainer: {
-    backgroundColor: COLORS.surface,
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   calendarGridHeader: {
     flexDirection: 'row',
@@ -380,7 +376,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 10,
     fontWeight: 'bold',
-    color: COLORS.textSecondary,
   },
   daysGrid: {
     flexDirection: 'row',
@@ -395,24 +390,18 @@ const styles = StyleSheet.create({
   },
   dayCellText: {
     fontSize: 13,
-    color: COLORS.text,
   },
   otherMonthText: {
-    color: COLORS.border,
   },
   selectedWeekCell: {
-    backgroundColor: COLORS.primary + '15',
     borderRadius: 0,
   },
   selectedWeekText: {
-    color: COLORS.primary,
     fontWeight: 'bold',
   },
   todayCell: {
-    backgroundColor: COLORS.primary,
   },
   todayCellText: {
-    color: COLORS.surface,
     fontWeight: 'bold',
   },
   statCircleContainer: {
@@ -430,7 +419,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 4,
@@ -441,7 +429,6 @@ const styles = StyleSheet.create({
   },
   fabText: {
     fontSize: 24,
-    color: COLORS.surface,
     fontWeight: 'bold',
   },
 });

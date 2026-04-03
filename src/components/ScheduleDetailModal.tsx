@@ -1,8 +1,10 @@
+import React from 'react';
 import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback, Alert, Dimensions } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { SPACING, BORDER_RADIUS } from '../constants/theme';
 import { Schedule } from '../types';
 import { X, Calendar, Clock, AlignLeft, Trash2, Edit2, Check } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../context/ThemeContext';
 
 interface ScheduleDetailModalProps {
   visible: boolean;
@@ -22,6 +24,8 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
   onToggleCompletion,
 }) => {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  
   if (!schedule) return null;
 
   const handleDeletePress = () => {
@@ -40,7 +44,6 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
   };
 
   const getContrastColor = (hexcolor: string) => {
-    // If hexcolor is something like '#RGB', expand it to '#RRGGBB'
     let color = hexcolor.replace('#', '');
     if (color.length === 3) {
       color = color.split('').map(char => char + char).join('');
@@ -50,12 +53,11 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
     const g = parseInt(color.substr(2, 2), 16);
     const b = parseInt(color.substr(4, 2), 16);
     
-    // YIQ formula to determine brightness
     const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
     return (yiq >= 128) ? '#000000' : '#ffffff';
   };
 
-  const contrastColor = schedule.is_completed ? getContrastColor(schedule.color) : COLORS.text;
+  const contrastColor = schedule.is_completed ? getContrastColor(schedule.color) : colors.text;
 
   return (
     <Modal
@@ -69,40 +71,44 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
           <TouchableWithoutFeedback>
             <View style={[
               styles.modalContainer, 
-              { maxHeight: Dimensions.get('window').height - insets.top - insets.bottom - SPACING.xl * 2 }
+              { 
+                backgroundColor: colors.surface,
+                maxHeight: Dimensions.get('window').height - insets.top - insets.bottom - SPACING.xl * 2 
+              }
             ]}>
-              <View style={styles.header}>
+              <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <View style={styles.titleContainer}>
                   <View style={[styles.colorDot, { backgroundColor: schedule.color }]} />
-                  <Text style={[styles.title, schedule.is_completed && styles.completedText]} numberOfLines={2}>{schedule.title}</Text>
+                  <Text style={[styles.title, { color: colors.text }, schedule.is_completed && styles.completedText]} numberOfLines={2}>
+                    {schedule.title}
+                  </Text>
                 </View>
                  <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                   <X color={COLORS.textSecondary} size={24} />
+                   <X color={colors.textSecondary} size={24} />
                  </TouchableOpacity>
                </View>
 
-
               <ScrollView style={styles.content}>
                 <View style={styles.infoRow}>
-                  <Calendar size={20} color={COLORS.primary} style={styles.icon} />
-                  <Text style={styles.value}>
+                  <Calendar size={20} color={colors.primary} style={styles.icon} />
+                  <Text style={[styles.value, { color: colors.text }]}>
                     {schedule.is_routine ? '루틴 일정' : '일반 일정'}
                   </Text>
                 </View>
 
                 <View style={styles.infoRow}>
-                  <Clock size={20} color={COLORS.primary} style={styles.icon} />
-                  <Text style={styles.value}>
+                  <Clock size={20} color={colors.primary} style={styles.icon} />
+                  <Text style={[styles.value, { color: colors.text }]}>
                     {schedule.start_time} - {schedule.end_time}
                   </Text>
                 </View>
 
                 <View style={[styles.infoRow, { alignItems: 'flex-start' }]}>
-                  <AlignLeft size={20} color={COLORS.primary} style={styles.icon} />
+                  <AlignLeft size={20} color={colors.primary} style={styles.icon} />
                   <Text style={[
                     styles.value, 
-                    { flex: 1, fontWeight: 'normal' },
-                    !schedule.description && { color: COLORS.textSecondary, fontStyle: 'italic' }
+                    { flex: 1, fontWeight: 'normal', color: colors.text },
+                    !schedule.description && { color: colors.textSecondary, fontStyle: 'italic' }
                   ]}>
                     {schedule.description || '(내용 없음)'}
                   </Text>
@@ -110,35 +116,53 @@ export const ScheduleDetailModal: React.FC<ScheduleDetailModalProps> = ({
 
                 <View style={styles.completionSectionInside}>
                   <TouchableOpacity 
-                    style={[styles.checkboxContainer, schedule.is_completed && { backgroundColor: schedule.color, borderColor: schedule.color }]}
+                    style={[
+                      styles.checkboxContainer, 
+                      { backgroundColor: colors.surface, borderColor: colors.border },
+                      schedule.is_completed && { backgroundColor: schedule.color, borderColor: schedule.color }
+                    ]}
                     onPress={() => onToggleCompletion?.(schedule)}
                   >
-                    <View style={[styles.checkbox, schedule.is_completed && { borderColor: contrastColor }]}>
+                    <View style={[
+                      styles.checkbox, 
+                      { borderColor: colors.border },
+                      schedule.is_completed && { borderColor: contrastColor }
+                    ]}>
                       {schedule.is_completed && <Check size={16} color={contrastColor} strokeWidth={3} />}
                     </View>
-                    <Text style={[styles.completionText, schedule.is_completed && { color: contrastColor, fontWeight: 'bold' }]}>
+                    <Text style={[
+                      styles.completionText, 
+                      { color: colors.text },
+                      schedule.is_completed && { color: contrastColor, fontWeight: 'bold' }
+                    ]}>
                       {schedule.is_completed ? '수행 완료' : '미완료 (수행하려면 체크)'}
                     </Text>
                   </TouchableOpacity>
                 </View>
               </ScrollView>
 
-              <View style={styles.footer}>
+              <View style={[styles.footer, { borderTopColor: colors.border }]}>
                 {schedule.is_routine ? (
-                  <View style={styles.routineNotice}>
-                    <Text style={styles.routineNoticeText}>
+                  <View style={[styles.routineNotice, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                    <Text style={[styles.routineNoticeText, { color: colors.textSecondary }]}>
                       루틴 일정은 특정 날짜만 변경이 불가합니다.
                     </Text>
                   </View>
                 ) : (
                   <TouchableOpacity 
-                    style={styles.editButton}
+                    style={[styles.editButton, { backgroundColor: colors.primary }]}
                     onPress={() => onEdit(schedule)}
                   >
                     <Edit2 size={16} color="white" style={{ marginRight: 6 }} />
                     <Text style={styles.editButtonText}>일정 변경</Text>
                   </TouchableOpacity>
                 )}
+                <TouchableOpacity 
+                  style={[styles.deleteButton, { backgroundColor: isDark ? colors.background : colors.error + '10', borderColor: colors.error }]} 
+                  onPress={handleDeletePress}
+                >
+                  <Trash2 size={18} color={colors.error} />
+                </TouchableOpacity>
               </View>
             </View>
           </TouchableWithoutFeedback>
@@ -158,7 +182,6 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     width: '100%',
-    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.lg,
     maxHeight: '80%',
     overflow: 'hidden',
@@ -174,7 +197,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     padding: SPACING.lg,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   titleContainer: {
     flex: 1,
@@ -191,7 +213,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: COLORS.text,
   },
   completedText: {
     textDecorationLine: 'line-through',
@@ -210,22 +231,18 @@ const styles = StyleSheet.create({
     padding: SPACING.sm + 2,
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
   },
   checkbox: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   completionText: {
     fontSize: 15,
-    color: COLORS.text,
   },
   content: {
     padding: SPACING.md,
@@ -240,7 +257,6 @@ const styles = StyleSheet.create({
   },
   value: {
     fontSize: 17,
-    color: COLORS.text,
     fontWeight: '600',
     lineHeight: 24,
   },
@@ -248,14 +264,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: SPACING.lg,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
     alignItems: 'center',
     gap: SPACING.sm,
   },
   editButton: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: COLORS.primary,
     paddingVertical: 10,
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
@@ -266,18 +280,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
   },
+  deleteButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
   routineNotice: {
     flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   routineNoticeText: {
-    color: COLORS.textSecondary,
     fontSize: 13,
     fontStyle: 'italic',
   },

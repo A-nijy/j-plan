@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, FlatList, Alert } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
+import { SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { TodoService } from '../../src/services/TodoService';
 import { Todo } from '../../src/types';
 import { CheckCircle2, Circle, Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react-native';
@@ -14,8 +14,10 @@ import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-nativ
 import SwipeableRow from '../../src/components/common/SwipeableRow';
 import OnboardingTooltip from '../../src/components/common/OnboardingTooltip';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../../src/context/ThemeContext';
 
 export default function TodoScreen() {
+  const { colors } = useTheme();
   const [tab, setTab] = useState<'habit' | 'daily'>('habit');
   const [todos, setTodos] = useState<any[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -57,10 +59,8 @@ export default function TodoScreen() {
   const handleSaveTodo = async (todoData: any) => {
     try {
       if (todoData.id) {
-        // Edit mode - versioned by current selected date
         await TodoService.updateTodo(todoData.id, todoData.content, todoData.description, dateStr);
       } else {
-        // Add mode
         await TodoService.createTodo({
           ...todoData,
           is_completed: 0,
@@ -106,7 +106,8 @@ export default function TodoScreen() {
         <TouchableOpacity 
           style={[
             styles.todoItem, 
-            isActive && { backgroundColor: COLORS.background, elevation: 5 },
+            { backgroundColor: colors.surface },
+            isActive && { backgroundColor: colors.background, elevation: 5 },
             { marginBottom: 0 }
           ]} 
           onPress={() => handlePressItem(item)}
@@ -116,26 +117,26 @@ export default function TodoScreen() {
           <View style={styles.todoLeft}>
             <TouchableOpacity onPress={() => handleToggle(item.id, item.is_completed)}>
               {item.is_completed === 1 ? (
-                <CheckCircle2 color={COLORS.primary} size={24} />
+                <CheckCircle2 color={colors.primary} size={24} />
               ) : (
-                <Circle color={COLORS.textSecondary} size={24} />
+                <Circle color={colors.textSecondary} size={24} />
               )}
             </TouchableOpacity>
-            <Text style={[styles.todoText, item.is_completed === 1 && styles.completedText]}>
+            <Text style={[styles.todoText, { color: colors.text }, item.is_completed === 1 && styles.completedText]}>
               {item.content}
             </Text>
           </View>
 
           {tab === 'habit' && (
             <TouchableOpacity 
-              style={styles.streakBadge}
+              style={[styles.streakBadge, { backgroundColor: colors.background, borderColor: colors.border }]}
               onPress={() => {
                 setSelectedHistoryTodo(item);
                 setHistoryModalVisible(true);
               }}
             >
-              <Flame size={14} color={item.streak > 0 ? '#FF8B3D' : COLORS.textSecondary} style={{ marginRight: 2 }} />
-              <Text style={[styles.streakText, item.streak > 0 && { color: '#FF8B3D' }]}>{item.streak}</Text>
+              <Flame size={14} color={item.streak > 0 ? '#FF8B3D' : colors.textSecondary} style={{ marginRight: 2 }} />
+              <Text style={[styles.streakText, { color: colors.textSecondary }, item.streak > 0 && { color: '#FF8B3D' }]}>{item.streak}</Text>
             </TouchableOpacity>
           )}
         </TouchableOpacity>
@@ -149,7 +150,7 @@ export default function TodoScreen() {
   const progressPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <OnboardingTooltip 
         type="swipe" 
         visible={showSwipeTooltip} 
@@ -160,48 +161,47 @@ export default function TodoScreen() {
         visible={showDragTooltip} 
         onClose={() => setShowDragTooltip(false)} 
       />
-      {/* Integrated Compact Header */}
-      <View style={styles.controlRegion}>
+      <View style={[styles.controlRegion, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.headerTop}>
           <TouchableOpacity 
-            style={styles.todayBtn} 
+            style={[styles.todayBtn, { backgroundColor: colors.primary + '15' }]} 
             onPress={() => setSelectedDate(new Date())}
           >
-            <Text style={styles.todayBtnText}>오늘</Text>
+            <Text style={[styles.todayBtnText, { color: colors.primary }]}>오늘</Text>
           </TouchableOpacity>
 
           <View style={styles.dateNav}>
             <TouchableOpacity style={styles.navBtn} onPress={() => moveDate(-1)}>
-              <ChevronLeft color={COLORS.text} size={22} />
+              <ChevronLeft color={colors.text} size={22} />
             </TouchableOpacity>
             <View style={styles.dateLabelContainer}>
-              <Text style={styles.dateText}>
+              <Text style={[styles.dateText, { color: colors.text }]}>
                 {format(selectedDate, 'M월 d일 (E)', { locale: ko })}
               </Text>
             </View>
             <TouchableOpacity style={styles.navBtn} onPress={() => moveDate(1)}>
-              <ChevronRight color={COLORS.text} size={22} />
+              <ChevronRight color={colors.text} size={22} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.compactProgress}>
-            <Text style={styles.progressValue}>{progressPercentage}%</Text>
+            <Text style={[styles.progressValue, { color: colors.primary }]}>{progressPercentage}%</Text>
           </View>
         </View>
 
         <View style={styles.tabWrapper}>
-          <View style={styles.segmentedControl}>
+          <View style={[styles.segmentedControl, { backgroundColor: colors.background }]}>
             <TouchableOpacity 
-              style={[styles.segmentBtn, tab === 'habit' && styles.activeSegment]} 
+              style={[styles.segmentBtn, tab === 'habit' && [styles.activeSegment, { backgroundColor: colors.surface }]]} 
               onPress={() => setTab('habit')}
             >
-              <Text style={[styles.segmentText, tab === 'habit' && styles.activeSegmentText]}>매일 습관</Text>
+              <Text style={[styles.segmentText, { color: colors.textSecondary }, tab === 'habit' && { color: colors.primary, fontWeight: 'bold' }]}>매일 습관</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.segmentBtn, tab === 'daily' && styles.activeSegment]} 
+              style={[styles.segmentBtn, tab === 'daily' && [styles.activeSegment, { backgroundColor: colors.surface }]]} 
               onPress={() => setTab('daily')}
             >
-              <Text style={[styles.segmentText, tab === 'daily' && styles.activeSegmentText]}>일일 할 일</Text>
+              <Text style={[styles.segmentText, { color: colors.textSecondary }, tab === 'daily' && { color: colors.primary, fontWeight: 'bold' }]}>일일 할 일</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -218,7 +218,7 @@ export default function TodoScreen() {
         }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               {tab === 'habit' ? '아직 습관이 없습니다.' : '할 일이 없습니다.'}
             </Text>
           </View>
@@ -226,10 +226,10 @@ export default function TodoScreen() {
       />
       
       <TouchableOpacity 
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: colors.primary }]}
         onPress={() => setModalVisible(true)}
       >
-        <Plus color={COLORS.surface} size={24} />
+        <Plus color={colors.surface} size={24} />
       </TouchableOpacity>
 
       <AddTodoModal
@@ -275,13 +275,10 @@ export default function TodoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   controlRegion: {
-    backgroundColor: COLORS.surface,
     paddingVertical: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   headerTop: {
     flexDirection: 'row',
@@ -304,13 +301,11 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: COLORS.text,
   },
   navBtn: {
     padding: SPACING.xs,
   },
   todayBtn: {
-    backgroundColor: COLORS.primary + '15',
     paddingHorizontal: SPACING.sm,
     paddingVertical: 5,
     borderRadius: BORDER_RADIUS.sm,
@@ -318,7 +313,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   todayBtnText: {
-    color: COLORS.primary,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -329,14 +323,12 @@ const styles = StyleSheet.create({
   progressValue: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: COLORS.primary,
   },
   tabWrapper: {
     paddingHorizontal: SPACING.md,
   },
   segmentedControl: {
     flexDirection: 'row',
-    backgroundColor: COLORS.background,
     borderRadius: BORDER_RADIUS.md,
     padding: 2,
   },
@@ -347,7 +339,6 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md - 2,
   },
   activeSegment: {
-    backgroundColor: COLORS.surface,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -356,22 +347,23 @@ const styles = StyleSheet.create({
   },
   segmentText: {
     fontSize: 13,
-    color: COLORS.textSecondary,
     fontWeight: '500',
-  },
-  activeSegmentText: {
-    color: COLORS.primary,
-    fontWeight: 'bold',
   },
   listContent: {
     padding: SPACING.md,
-    paddingBottom: 120, // Increased for safe area
+    paddingBottom: 120,
   },
   todoItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   todoLeft: {
     flexDirection: 'row',
@@ -381,35 +373,31 @@ const styles = StyleSheet.create({
   todoText: {
     marginLeft: SPACING.md,
     fontSize: 16,
-    color: COLORS.text,
     flex: 1,
   },
   streakBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
     marginLeft: SPACING.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   streakText: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: COLORS.textSecondary,
   },
   completedText: {
     textDecorationLine: 'line-through',
-    color: COLORS.textSecondary,
+    opacity: 0.6,
   },
   emptyContainer: {
     paddingVertical: SPACING.xl,
     alignItems: 'center',
   },
   emptyText: {
-    color: COLORS.textSecondary,
+    fontSize: 14,
   },
   fab: {
     position: 'absolute',
@@ -418,7 +406,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 4,

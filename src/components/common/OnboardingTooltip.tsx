@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Animated, TouchableOpacity } from 'react-native';
 import { Info, X } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
+import { SPACING, BORDER_RADIUS } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 interface OnboardingTooltipProps {
   type: 'swipe' | 'drag';
@@ -13,6 +14,7 @@ interface OnboardingTooltipProps {
 const STORAGE_KEY_PREFIX = 'tooltip_seen_';
 
 export default function OnboardingTooltip({ type, visible, onClose }: OnboardingTooltipProps) {
+  const { colors } = useTheme();
   const [fadeAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
@@ -50,12 +52,15 @@ export default function OnboardingTooltip({ type, visible, onClose }: Onboarding
   };
 
   return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <View style={styles.content}>
-        <Info color={COLORS.primary} size={20} style={styles.icon} />
-        <Text style={styles.text}>{getMessage()}</Text>
+    <Animated.View style={[
+      styles.container, 
+      { opacity: fadeAnim, shadowColor: colors.text }
+    ]}>
+      <View style={[styles.content, { backgroundColor: colors.surface, borderColor: colors.primary + '50' }]}>
+        <Info color={colors.primary} size={20} style={styles.icon} />
+        <Text style={[styles.text, { color: colors.text }]}>{getMessage()}</Text>
         <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
-          <X color={COLORS.textSecondary} size={18} />
+          <X color={colors.textSecondary} size={18} />
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -70,7 +75,6 @@ const styles = StyleSheet.create({
     right: SPACING.md,
     zIndex: 1000,
     elevation: 10,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
@@ -78,11 +82,9 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.primary + '30',
   },
   icon: {
     marginRight: 10,
@@ -90,7 +92,6 @@ const styles = StyleSheet.create({
   text: {
     flex: 1,
     fontSize: 13,
-    color: COLORS.text,
     lineHeight: 18,
   },
   closeBtn: {

@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { SPACING, BORDER_RADIUS } from '../constants/theme';
 import { Schedule } from '../types';
+import { useTheme } from '../context/ThemeContext';
 
 const HOUR_HEIGHT = 60;
  
@@ -36,6 +37,7 @@ interface WeeklyGridProps {
 }
  
 export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedule, startDate = new Date(), settings }) => {
+  const { colors } = useTheme();
   const { start_hour, end_hour, grid_interval } = settings;
   const hours = [];
   for (let i = start_hour; i <= end_hour; i++) {
@@ -51,7 +53,6 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
     const [startH, startM] = schedule.start_time.split(':').map(Number);
     let [endH, endM] = schedule.end_time.split(':').map(Number);
     
-    // Normalize end time: 00:00 -> 24:00 if it's at the end of the day
     if (endH === 0 && endM === 0 && startH > 0) {
       endH = 24;
     }
@@ -79,18 +80,22 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
   const subLinesCount = 60 / grid_interval;
  
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {/* Day Header */}
-      <View style={styles.dayHeader}>
+      <View style={[styles.dayHeader, { borderBottomColor: colors.border, backgroundColor: colors.background }]}>
         <View style={styles.hourColPlaceholder} />
         {weekDates.map((date, i) => {
           const isToday = isSameDay(date, today);
           return (
-            <View key={i} style={[styles.dayLabel, isToday && styles.todayLabel]}>
-              <Text style={[styles.dayText, isToday && styles.todayDayText]}>
+            <View key={i} style={[
+              styles.dayLabel, 
+              { borderLeftColor: colors.border },
+              isToday && { backgroundColor: colors.primary + '15' }
+            ]}>
+              <Text style={[styles.dayText, { color: colors.textSecondary }, isToday && { color: colors.primary }]}>
                 {format(date, 'E', { locale: ko })}
               </Text>
-              <Text style={[styles.dateText, isToday && styles.todayDateText]}>
+              <Text style={[styles.dateText, { color: colors.text }, isToday && { color: colors.primary, fontWeight: 'bold' }]}>
                 {format(date, 'd')}
               </Text>
             </View>
@@ -105,10 +110,10 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
       >
         <View style={styles.gridBody}>
           {/* Hour Labels */}
-          <View style={styles.hourColumn}>
+          <View style={[styles.hourColumn, { backgroundColor: colors.background }]}>
             {hours.map((h) => (
               <View key={h} style={styles.hourCell}>
-                <Text style={styles.hourText}>{h}:00</Text>
+                <Text style={[styles.hourText, { color: colors.textSecondary }]}>{h}:00</Text>
               </View>
             ))}
           </View>
@@ -128,9 +133,9 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
                         key={i} 
                         style={[
                           styles.gridLine, 
-                          { height: HOUR_HEIGHT / subLinesCount },
-                          i === 0 ? { borderTopWidth: 1, borderTopColor: COLORS.border + '70' } : { borderTopWidth: 1, borderTopColor: COLORS.border + '20', borderStyle: 'dashed' },
-                          isLastHour && isLastSubLine && { borderBottomWidth: 1, borderBottomColor: COLORS.border + '70' }
+                          { height: HOUR_HEIGHT / subLinesCount, borderBottomColor: colors.border + '20' },
+                          i === 0 ? { borderTopWidth: 1, borderTopColor: colors.border + '70' } : { borderTopWidth: 1, borderTopColor: colors.border + '20', borderStyle: 'dashed' },
+                          isLastHour && isLastSubLine && { borderBottomWidth: 1, borderBottomColor: colors.border + '70' }
                         ]} 
                       />
                     );
@@ -138,11 +143,11 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
                 </View>
               ))}
             </View>
-
+ 
             {/* Vertical Columns and Schedules */}
             <View style={styles.columnsContainer}>
               {weekDates.map((_, dayIndex) => (
-                <View key={dayIndex} style={styles.dayColumn}>
+                <View key={dayIndex} style={[styles.dayColumn, { borderLeftColor: colors.border + '50' }]}>
                   {getSchedulesForDay(dayIndex).map((s) => {
                     const style = getScheduleStyle(s);
                     if (style.top < 0 || style.top >= hours.length * HOUR_HEIGHT) return null;
@@ -189,17 +194,13 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ schedules, onPressSchedu
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   dayHeader: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.background,
   },
   hourColPlaceholder: {
     width: 50,
@@ -209,28 +210,15 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs,
     alignItems: 'center',
     borderLeftWidth: 1,
-    borderLeftColor: COLORS.border,
-  },
-  todayLabel: {
-    backgroundColor: COLORS.primary + '08',
   },
   dayText: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: COLORS.textSecondary,
-  },
-  todayDayText: {
-    color: COLORS.primary,
   },
   dateText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.text,
     marginTop: 2,
-  },
-  todayDateText: {
-    color: COLORS.primary,
-    fontWeight: 'bold',
   },
   gridScroll: {
     flex: 1,
@@ -240,7 +228,6 @@ const styles = StyleSheet.create({
   },
   hourColumn: {
     width: 50,
-    backgroundColor: COLORS.background,
   },
   hourCell: {
     height: HOUR_HEIGHT,
@@ -253,7 +240,6 @@ const styles = StyleSheet.create({
   hourText: {
     fontSize: 10,
     lineHeight: 12,
-    color: COLORS.textSecondary,
     marginTop: -10,
     includeFontPadding: false,
     textAlignVertical: 'center',
@@ -271,12 +257,10 @@ const styles = StyleSheet.create({
   dayColumn: {
     flex: 1,
     borderLeftWidth: 1,
-    borderLeftColor: COLORS.border + '50',
     position: 'relative',
   },
   gridLine: {
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border + '20',
   },
   scheduleBlock: {
     position: 'absolute',
@@ -294,7 +278,6 @@ const styles = StyleSheet.create({
   },
   scheduleTitle: {
     fontSize: 9,
-    color: '#FFF',
     fontWeight: 'bold',
   },
 });

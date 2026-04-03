@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, ActivityIndicator, TouchableWithoutFeedback, Dimensions } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { SPACING, BORDER_RADIUS } from '../constants/theme';
 import { X, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Edit3 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDay, isAfter, startOfDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { TodoService } from '../services/TodoService';
+import { useTheme } from '../context/ThemeContext';
 
 interface HabitHistoryModalProps {
   visible: boolean;
@@ -19,6 +20,7 @@ interface HabitHistoryModalProps {
 
 export default function HabitHistoryModal({ visible, onClose, todo }: HabitHistoryModalProps) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [historyData, setHistoryData] = useState<{ 
@@ -86,17 +88,17 @@ export default function HabitHistoryModal({ visible, onClose, todo }: HabitHisto
       <View style={styles.calendarContainer}>
         <View style={styles.calendarHeader}>
           <TouchableOpacity onPress={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-            <ChevronLeft size={24} color={COLORS.text} />
+            <ChevronLeft size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.monthText}>{format(currentMonth, 'yyyy년 M월')}</Text>
+          <Text style={[styles.monthText, { color: colors.text }]}>{format(currentMonth, 'yyyy년 M월')}</Text>
           <TouchableOpacity onPress={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-            <ChevronRight size={24} color={COLORS.text} />
+            <ChevronRight size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.weekLabels}>
           {dayLabels.map((label, i) => (
-            <Text key={i} style={[styles.dayLabel, i === 0 && { color: '#FFADAD' }, i === 6 && { color: '#A0C4FF' }]}>
+            <Text key={i} style={[styles.dayLabel, { color: colors.textSecondary }, i === 0 && { color: '#FF8A8A' }, i === 6 && { color: '#8AB4FF' }]}>
               {label}
             </Text>
           ))}
@@ -117,21 +119,22 @@ export default function HabitHistoryModal({ visible, onClose, todo }: HabitHisto
                 key={dateStr} 
                 style={[
                   styles.dayCell, 
-                  isSelected && styles.selectedDayCell
+                  isSelected && { backgroundColor: colors.primary + '20', borderColor: colors.primary + '40', borderWidth: 1 }
                 ]}
                 onPress={() => setSelectedDate(day)}
               >
                 <Text style={[
                   styles.dayText, 
-                  isSelected && styles.selectedDayText,
-                  isToday && styles.todayText,
+                  { color: colors.text },
+                  isSelected && { color: colors.primary, fontWeight: 'bold' },
+                  isToday && [styles.todayText, { color: colors.primary }],
                   isFuture && { opacity: 0.3 }
                 ]}>
                   {format(day, 'd')}
                 </Text>
                 <View style={styles.indicatorRow}>
-                  {isCompleted && <View style={styles.completionDot} />}
-                  {isChanged && <Edit3 size={8} color={COLORS.primary} style={styles.editIcon} />}
+                  {isCompleted && <View style={[styles.completionDot, { backgroundColor: colors.primary }]} />}
+                  {isChanged && <Edit3 size={8} color={colors.primary} style={styles.editIcon} />}
                 </View>
               </TouchableOpacity>
             );
@@ -154,21 +157,24 @@ export default function HabitHistoryModal({ visible, onClose, todo }: HabitHisto
         </TouchableWithoutFeedback>
         <View style={[
           styles.modalContent, 
-          { maxHeight: Dimensions.get('window').height - insets.top - insets.bottom - SPACING.xl * 2 }
+          { 
+            backgroundColor: colors.surface,
+            maxHeight: Dimensions.get('window').height - insets.top - insets.bottom - SPACING.xl * 2 
+          }
         ]}>
-          <View style={styles.header}>
+          <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <View style={styles.titleContainer}>
-              <CalendarIcon size={20} color={COLORS.primary} style={{ marginRight: 8 }} />
-              <Text style={styles.headerTitle} numberOfLines={1}>{todo.content}</Text>
+              <CalendarIcon size={20} color={colors.primary} style={{ marginRight: 8 }} />
+              <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>{todo.content}</Text>
             </View>
             <TouchableOpacity onPress={onClose}>
-              <X color={COLORS.text} size={24} />
+              <X color={colors.text} size={24} />
             </TouchableOpacity>
           </View>
 
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
+              <ActivityIndicator size="large" color={colors.primary} />
             </View>
           ) : (
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -176,61 +182,59 @@ export default function HabitHistoryModal({ visible, onClose, todo }: HabitHisto
 
               <View style={[styles.legend, { marginTop: -SPACING.md, marginBottom: SPACING.lg }]}>
                 <View style={styles.legendItem}>
-                  <View style={styles.completionDot} />
-                  <Text style={styles.legendText}>달성 완료</Text>
+                  <View style={[styles.completionDot, { backgroundColor: colors.primary }]} />
+                  <Text style={[styles.legendText, { color: colors.textSecondary }]}>달성 완료</Text>
                 </View>
                 <View style={[styles.legendItem, { marginLeft: 16 }]}>
-                  <Edit3 size={12} color={COLORS.primary} />
-                  <Text style={styles.legendText}>내용 수정일</Text>
+                  <Edit3 size={12} color={colors.primary} />
+                  <Text style={[styles.legendText, { color: colors.textSecondary }]}>내용 수정일</Text>
                 </View>
               </View>
 
-              <View style={styles.detailCard}>
-                <View style={styles.detailHeader}>
-                  <Text style={styles.detailDate}>
+              <View style={[styles.detailCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <View style={[styles.detailHeader, { borderBottomColor: colors.border + '50' }]}>
+                  <Text style={[styles.detailDate, { color: colors.text }]}>
                     {format(selectedDate, 'M월 d일 (E)', { locale: ko })}
                   </Text>
                   {isBeforeStart ? (
-                    <View style={styles.beforeStartBadge}>
-                      <Text style={styles.beforeStartText}>시작 전</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: colors.border + '50' }]}>
+                      <Text style={[styles.statusText, { color: colors.textSecondary }]}>시작 전</Text>
                     </View>
                   ) : isCompletedDay(selectedDateStr) ? (
-                    <View style={styles.statusBadge}>
-                      <Text style={styles.statusText}>달성</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: colors.primary + '20' }]}>
+                      <Text style={[styles.statusText, { color: colors.primary }]}>달성</Text>
                     </View>
                   ) : (
-                    <Text style={styles.uncompletedText}>미달성</Text>
+                    <Text style={[styles.uncompletedText, { color: colors.textSecondary }]}>미달성</Text>
                   )}
                 </View>
                 
                 {isBeforeStart ? (
                   <View style={styles.contentWrap}>
-                    <Text style={[styles.activeContentText, { color: COLORS.textSecondary, fontStyle: 'italic' }]}>
+                    <Text style={[styles.activeContentText, { color: colors.textSecondary, fontStyle: 'italic' }]}>
                       해당 습관이 시작되기 전입니다.
                     </Text>
                   </View>
                 ) : (
                   <>
-                    <View style={styles.contentWrap}>
-                      <Text style={styles.contentLabel}>제목</Text>
-                      <Text style={[styles.activeContentText, { fontWeight: '700', marginBottom: SPACING.sm }]}>
+                    <div style={styles.contentWrap}>
+                      <Text style={[styles.contentLabel, { color: colors.textSecondary }]}>제목</Text>
+                      <Text style={[styles.activeContentText, { color: colors.text, fontWeight: '700', marginBottom: SPACING.sm }]}>
                         {activeContent.content}
                       </Text>
                       
-                      <Text style={styles.contentLabel}>세부 내용</Text>
+                      <Text style={[styles.contentLabel, { color: colors.textSecondary }]}>세부 내용</Text>
                       <Text style={[
                         styles.activeContentText,
-                        !activeContent.description && { color: COLORS.textSecondary, fontStyle: 'italic' }
+                        { color: colors.text },
+                        !activeContent.description && { color: colors.textSecondary, fontStyle: 'italic' }
                       ]}>
                         {activeContent.description || '(내용 없음)'}
                       </Text>
-                    </View>
-
+                    </div>
                   </>
                 )}
               </View>
-
-
             </ScrollView>
           )}
         </View>
@@ -250,7 +254,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   modalContent: {
-    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.xl,
     padding: SPACING.lg,
     width: '100%',
@@ -267,7 +270,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
     paddingBottom: SPACING.sm,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   titleContainer: {
     flexDirection: 'row',
@@ -278,7 +280,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: COLORS.text,
   },
   loadingContainer: {
     height: 300,
@@ -298,7 +299,6 @@ const styles = StyleSheet.create({
   monthText: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: COLORS.text,
   },
   weekLabels: {
     flexDirection: 'row',
@@ -309,7 +309,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.textSecondary,
   },
   daysGrid: {
     flexDirection: 'row',
@@ -323,23 +322,12 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     marginBottom: 4,
   },
-  selectedDayCell: {
-    backgroundColor: COLORS.primary + '15',
-    borderWidth: 1,
-    borderColor: COLORS.primary + '30',
-  },
   dayText: {
     fontSize: 15,
-    color: COLORS.text,
   },
   todayText: {
-    color: COLORS.primary,
     fontWeight: 'bold',
     textDecorationLine: 'underline',
-  },
-  selectedDayText: {
-    color: COLORS.primary,
-    fontWeight: 'bold',
   },
   indicatorRow: {
     flexDirection: 'row',
@@ -351,19 +339,16 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: COLORS.primary,
     marginHorizontal: 1,
   },
   editIcon: {
     marginHorizontal: 1,
   },
   detailCard: {
-    backgroundColor: COLORS.background,
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.md,
     marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   detailHeader: {
     flexDirection: 'row',
@@ -372,65 +357,33 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
     paddingBottom: SPACING.xs,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border + '50',
   },
   detailDate: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: COLORS.text,
   },
   statusBadge: {
-    backgroundColor: COLORS.primary + '20',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
   },
   statusText: {
     fontSize: 12,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-  },
-  beforeStartBadge: {
-    backgroundColor: COLORS.border + '50',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  beforeStartText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
     fontWeight: 'bold',
   },
   uncompletedText: {
     fontSize: 13,
-    color: COLORS.textSecondary,
   },
   contentWrap: {
     marginTop: SPACING.xs,
   },
   contentLabel: {
     fontSize: 11,
-    color: COLORS.textSecondary,
     marginBottom: 2,
   },
   activeContentText: {
     fontSize: 15,
-    color: COLORS.text,
     lineHeight: 20,
-  },
-  changeNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: SPACING.md,
-    padding: 8,
-    backgroundColor: COLORS.primary + '08',
-    borderRadius: 6,
-  },
-  changeNoticeText: {
-    marginLeft: 6,
-    fontSize: 12,
-    color: COLORS.primary,
-    fontWeight: '500',
   },
   legend: {
     flexDirection: 'row',
@@ -444,6 +397,5 @@ const styles = StyleSheet.create({
   legendText: {
     marginLeft: 4,
     fontSize: 12,
-    color: COLORS.textSecondary,
   },
 });

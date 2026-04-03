@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, Modal, TouchableOpacity, ScrollView, TouchableWithoutFeedback, Dimensions } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { SPACING, BORDER_RADIUS } from '../constants/theme';
 import { WeeklySettings, WeeklySettingsService } from '../services/WeeklySettingsService';
 import { X, Clock } from 'lucide-react-native';
 import { TimePickerModal } from './common/TimePickerModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../context/ThemeContext';
 
 interface WeeklySettingsModalProps {
   visible: boolean;
@@ -27,6 +28,7 @@ const VIEW_MODES = [
 
 export const WeeklySettingsModal: React.FC<WeeklySettingsModalProps> = ({ visible, onClose, settings, onSave }) => {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const [localSettings, setLocalSettings] = useState<WeeklySettings>(settings);
   const [showPicker, setShowPicker] = useState<'start' | 'end' | null>(null);
 
@@ -59,34 +61,37 @@ export const WeeklySettingsModal: React.FC<WeeklySettingsModalProps> = ({ visibl
         <View style={[
           styles.content, 
           { 
+            backgroundColor: colors.background,
             paddingBottom: insets.bottom + SPACING.lg,
             maxHeight: Dimensions.get('window').height - insets.top - SPACING.xl
           }
         ]}>
           <View style={styles.header}>
-            <Text style={styles.title}>주간 시간표 설정</Text>
+            <Text style={[styles.title, { color: colors.text }]}>주간 시간표 설정</Text>
             <TouchableOpacity onPress={onClose}>
-              <X color={COLORS.text} size={24} />
+              <X color={colors.text} size={24} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.body}>
             {/* View Mode */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>보기 모드</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>보기 모드</Text>
               <View style={styles.buttonGroupVertical}>
                 {VIEW_MODES.map(mode => (
                   <TouchableOpacity
                     key={mode.value}
                     style={[
                       styles.modeButton,
-                      localSettings.view_mode === mode.value && styles.activeButton
+                      { backgroundColor: colors.surface, borderColor: colors.border },
+                      localSettings.view_mode === mode.value && [styles.activeButton, { backgroundColor: colors.primary, borderColor: colors.primary }]
                     ]}
                     onPress={() => handleUpdate({ view_mode: mode.value as any })}
                   >
                     <Text style={[
                       styles.buttonText,
-                      localSettings.view_mode === mode.value && styles.activeButtonText
+                      { color: colors.text },
+                      localSettings.view_mode === mode.value && [styles.activeButtonText, { color: colors.surface }]
                     ]}>
                       {mode.label}
                     </Text>
@@ -97,20 +102,22 @@ export const WeeklySettingsModal: React.FC<WeeklySettingsModalProps> = ({ visibl
 
             {/* Interval */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>시간 그리드 단위</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>시간 그리드 단위</Text>
               <View style={styles.buttonGroup}>
                 {INTERVALS.map(interval => (
                   <TouchableOpacity
                     key={interval.value}
                     style={[
                       styles.optionButton,
-                      localSettings.grid_interval === interval.value && styles.activeButton
+                      { backgroundColor: colors.surface, borderColor: colors.border },
+                      localSettings.grid_interval === interval.value && [styles.activeButton, { backgroundColor: colors.primary, borderColor: colors.primary }]
                     ]}
                     onPress={() => handleUpdate({ grid_interval: interval.value as any })}
                   >
                     <Text style={[
                       styles.buttonText,
-                      localSettings.grid_interval === interval.value && styles.activeButtonText
+                      { color: colors.text },
+                      localSettings.grid_interval === interval.value && [styles.activeButtonText, { color: colors.surface }]
                     ]}>
                       {interval.label}
                     </Text>
@@ -121,27 +128,27 @@ export const WeeklySettingsModal: React.FC<WeeklySettingsModalProps> = ({ visibl
 
             {/* Time Range */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>표시 시간 범위</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>표시 시간 범위</Text>
               <View style={styles.rangeRow}>
                 <View style={styles.flex1}>
-                  <Text style={styles.label}>시작 시간</Text>
+                  <Text style={[styles.label, { color: colors.textSecondary }]}>시작 시간</Text>
                   <TouchableOpacity 
-                    style={styles.timeInput}
+                    style={[styles.timeInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
                     onPress={() => setShowPicker('start')}
                   >
-                    <Clock size={16} color={COLORS.textSecondary} />
-                    <Text style={styles.timeText}>{localSettings.start_hour.toString().padStart(2, '0')}:00</Text>
+                    <Clock size={16} color={colors.textSecondary} />
+                    <Text style={[styles.timeText, { color: colors.text }]}>{localSettings.start_hour.toString().padStart(2, '0')}:00</Text>
                   </TouchableOpacity>
                 </View>
                 <View style={{ width: SPACING.md }} />
                 <View style={styles.flex1}>
-                  <Text style={styles.label}>종료 시간</Text>
+                  <Text style={[styles.label, { color: colors.textSecondary }]}>종료 시간</Text>
                   <TouchableOpacity 
-                    style={styles.timeInput}
+                    style={[styles.timeInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
                     onPress={() => setShowPicker('end')}
                   >
-                    <Clock size={16} color={COLORS.textSecondary} />
-                    <Text style={styles.timeText}>{localSettings.end_hour.toString().padStart(2, '0')}:00</Text>
+                    <Clock size={16} color={colors.textSecondary} />
+                    <Text style={[styles.timeText, { color: colors.text }]}>{localSettings.end_hour.toString().padStart(2, '0')}:00</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -154,12 +161,13 @@ export const WeeklySettingsModal: React.FC<WeeklySettingsModalProps> = ({ visibl
           <TouchableOpacity 
             style={[
               styles.saveButton, 
-              localSettings.start_hour >= localSettings.end_hour && styles.disabledButton
+              { backgroundColor: colors.primary },
+              localSettings.start_hour >= localSettings.end_hour && { backgroundColor: colors.border }
             ]} 
             onPress={handleSave}
             disabled={localSettings.start_hour >= localSettings.end_hour}
           >
-            <Text style={styles.saveButtonText}>적용하기</Text>
+            <Text style={[styles.saveButtonText, { color: colors.surface }]}>적용하기</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -186,7 +194,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   content: {
-    backgroundColor: COLORS.background,
     borderTopLeftRadius: BORDER_RADIUS.lg,
     borderTopRightRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
@@ -201,7 +208,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: COLORS.text,
   },
   body: {
     marginBottom: SPACING.lg,
@@ -212,7 +218,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: COLORS.text,
     marginBottom: SPACING.md,
   },
   buttonGroup: {
@@ -227,27 +232,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   modeButton: {
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   activeButton: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
   },
   buttonText: {
-    color: COLORS.text,
     fontSize: 14,
   },
   activeButtonText: {
-    color: COLORS.surface,
     fontWeight: 'bold',
   },
   rangeRow: {
@@ -258,34 +255,25 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    color: COLORS.textSecondary,
     marginBottom: SPACING.xs,
   },
   timeInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   timeText: {
     marginLeft: SPACING.sm,
     fontSize: 14,
-    color: COLORS.text,
   },
   saveButton: {
-    backgroundColor: COLORS.primary,
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
   },
-  disabledButton: {
-    backgroundColor: COLORS.border,
-  },
   saveButtonText: {
-    color: COLORS.surface,
     fontWeight: 'bold',
     fontSize: 16,
   },

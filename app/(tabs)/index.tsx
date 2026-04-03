@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
+import { SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { CircularClock } from '../../src/components/CircularClock';
 import { ScheduleService } from '../../src/services/ScheduleService';
 import { Schedule } from '../../src/types';
@@ -18,7 +18,10 @@ import { SeedService } from '../../src/services/SeedService';
 import SwipeableRow from '../../src/components/common/SwipeableRow';
 import OnboardingTooltip from '../../src/components/common/OnboardingTooltip';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../../src/context/ThemeContext';
+
 export default function TodayScreen() {
+  const { colors } = useTheme();
   const navigation = useNavigation();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -46,7 +49,10 @@ export default function TodayScreen() {
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity 
-          style={[styles.seedButton, { marginRight: SPACING.md }]}
+          style={[
+            styles.seedButton, 
+            { marginRight: SPACING.md, backgroundColor: colors.error + '15', borderColor: colors.error }
+          ]}
           onPress={async () => {
             const success = await SeedService.seedTestData();
             if (success) {
@@ -55,11 +61,11 @@ export default function TodayScreen() {
             }
           }}
         >
-          <Text style={styles.seedButtonText}>SEED</Text>
+          <Text style={[styles.seedButtonText, { color: colors.error }]}>SEED</Text>
         </TouchableOpacity>
       ),
     });
-  }, [navigation]);
+  }, [navigation, colors]);
 
   const toggleClock = async () => {
     if (!settings) return;
@@ -80,8 +86,6 @@ export default function TodayScreen() {
   const checkTooltip = async () => {
     const seen = await AsyncStorage.getItem('tooltip_seen_swipe');
     if (!seen) {
-      // Show tooltip if there's at least one item
-      // We'll trigger this inside loadSchedules after data is fetched
     }
   };
 
@@ -100,7 +104,6 @@ export default function TodayScreen() {
       setSchedules(data);
       checkDeletedRoutines();
       
-      // Handle tooltip visibility
       if (data.length > 0) {
         const seen = await AsyncStorage.getItem('tooltip_seen_swipe');
         if (!seen) setShowTooltip(true);
@@ -119,16 +122,11 @@ export default function TodayScreen() {
     target_date: string;
   }) => {
     try {
-      // If we are editing (initialValues present)
       if (initialValues?.id) {
         if (initialValues.is_routine) {
-          // Change Routine Only Today: 
-          // 1. Exclude old routine for today
           const templateId = initialValues.id.split('::')[1];
           await ScheduleService.excludeRoutineFromDate(templateId, dateStr);
-          // 2. Create new regular schedule (below)
         } else {
-          // Regular schedule edit: Delete old one first
           await ScheduleService.deleteScheduleAtDate(initialValues.id);
         }
       }
@@ -176,12 +174,6 @@ export default function TodayScreen() {
     }
   };
 
-  function timeToFloat(timeStr: string, isEnd: boolean = false) {
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    if (isEnd && hours === 0 && minutes === 0) return 24.0;
-    return hours + minutes / 60;
-  }
-
   const toggleCompletion = async (schedule: Schedule) => {
     try {
       await ScheduleService.toggleScheduleCompletion(
@@ -201,14 +193,21 @@ export default function TodayScreen() {
   const progressPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   const chartData = schedules.map(s => ({
-    startHour: timeToFloat(s.start_time),
-    endHour: timeToFloat(s.end_time, true),
+    startHour: (timeStr => {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return hours + minutes / 60;
+    })(s.start_time),
+    endHour: ((timeStr, isEnd) => {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      if (isEnd && hours === 0 && minutes === 0) return 24.0;
+      return hours + minutes / 60;
+    })(s.end_time, true),
     color: s.color,
     label: s.title,
   }));
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <OnboardingTooltip 
         type="swipe" 
         visible={showTooltip} 
@@ -226,33 +225,33 @@ export default function TodayScreen() {
             <View style={styles.headerLeft}>
               <View style={styles.dateNav}>
                 <TouchableOpacity style={styles.navBtn} onPress={() => moveDate(-1)}>
-                  <ChevronLeft color={COLORS.text} size={22} />
+                  <ChevronLeft color={colors.text} size={22} />
                 </TouchableOpacity>
                 <View style={styles.dateLabelContainer}>
-                  <Text style={styles.dateText}>
+                  <Text style={[styles.dateText, { color: colors.text }]}>
                     {format(selectedDate, 'M월 d일 (E)', { locale: ko })}
                   </Text>
                 </View>
                 <TouchableOpacity style={styles.navBtn} onPress={() => moveDate(1)}>
-                  <ChevronRight color={COLORS.text} size={22} />
+                  <ChevronRight color={colors.text} size={22} />
                 </TouchableOpacity>
               </View>
 
               <TouchableOpacity 
-                style={styles.todayBtn} 
+                style={[styles.todayBtn, { backgroundColor: colors.primary + '15' }]} 
                 onPress={() => setSelectedDate(new Date())}
               >
-                <Text style={styles.todayBtnText}>오늘</Text>
+                <Text style={[styles.todayBtnText, { color: colors.primary }]}>오늘</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.headerButtons}>
               {hasDeletedRoutines && (
                 <TouchableOpacity 
-                  style={styles.restoreHeaderButton}
+                  style={[styles.restoreHeaderButton, { backgroundColor: colors.primary + '15' }]}
                   onPress={() => setRestoreVisible(true)}
                 >
-                  <RotateCcw color={COLORS.primary} size={20} />
+                  <RotateCcw color={colors.primary} size={20} />
                 </TouchableOpacity>
               )}
               <TouchableOpacity 
@@ -260,26 +259,26 @@ export default function TodayScreen() {
                 onPress={toggleClock}
               >
                 {settings?.show_circular_clock === 1 ? (
-                  <EyeOff color={COLORS.textSecondary} size={20} />
+                  <EyeOff color={colors.textSecondary} size={20} />
                 ) : (
-                  <Eye color={COLORS.textSecondary} size={20} />
+                  <Eye color={colors.textSecondary} size={20} />
                 )}
               </TouchableOpacity>
               <TouchableOpacity 
-                style={styles.addButton}
+                style={[styles.addButton, { backgroundColor: colors.primary }]}
                 onPress={() => {
                   setInitialValues(null);
                   setModalVisible(true);
                 }}
               >
-                <Plus color={COLORS.surface} size={20} />
+                <Plus color={colors.surface} size={20} />
               </TouchableOpacity>
             </View>
           </View>
           
           {schedules.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>오늘 등록된 일정이 없습니다.</Text>
+            <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>오늘 등록된 일정이 없습니다.</Text>
             </View>
           ) : (
             schedules.map((item) => (
@@ -292,28 +291,32 @@ export default function TodayScreen() {
                   <TouchableOpacity 
                     activeOpacity={0.7} 
                     onPress={() => handlePressSchedule(item)}
-                    style={[styles.scheduleItem, { marginBottom: 0 }]}
+                    style={[styles.scheduleItem, { backgroundColor: colors.surface, marginBottom: 0 }]}
                   >
                     <View style={[styles.colorBar, { backgroundColor: item.color }]} />
                     <View style={styles.scheduleCardContent}>
                       <View style={styles.scheduleInfo}>
                         <View style={styles.titleRow}>
-                          <Text style={[styles.scheduleTitle, item.is_completed && styles.completedText]}>
+                          <Text style={[styles.scheduleTitle, { color: colors.text }, item.is_completed && styles.completedText]}>
                             {item.title}
                           </Text>
                           {item.is_routine && (
-                            <View style={styles.routineBadge}>
-                              <Text style={styles.routineBadgeText}>루틴</Text>
+                            <View style={[styles.routineBadge, { backgroundColor: colors.primary + '20' }]}>
+                              <Text style={[styles.routineBadgeText, { color: colors.primary }]}>루틴</Text>
                             </View>
                           )}
                         </View>
-                        <Text style={[styles.scheduleTime, item.is_completed && styles.completedText]}>
+                        <Text style={[styles.scheduleTime, { color: colors.textSecondary }, item.is_completed && styles.completedText]}>
                           {item.start_time} - {item.end_time}
                         </Text>
                       </View>
                       
                       <TouchableOpacity 
-                        style={[styles.checkbox, item.is_completed && { backgroundColor: item.color, borderColor: item.color }]}
+                        style={[
+                          styles.checkbox, 
+                          { borderColor: colors.border, backgroundColor: colors.surface },
+                          item.is_completed && { backgroundColor: item.color, borderColor: item.color }
+                        ]}
                         onPress={() => toggleCompletion(item)}
                       >
                         {item.is_completed && <Check size={14} color="white" strokeWidth={3} />}
@@ -348,7 +351,6 @@ export default function TodayScreen() {
         onEdit={handleEditSchedule}
         onToggleCompletion={async (schedule) => {
           await toggleCompletion(schedule);
-          // Update the selected schedule object in state to reflect the change in the modal
           setSelectedSchedule(prev => prev ? { ...prev, is_completed: !prev.is_completed } : null);
         }}
       />
@@ -368,11 +370,10 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   scrollContent: {
     padding: SPACING.md,
-    paddingBottom: 120, // Increased for safe area
+    paddingBottom: 120,
   },
   clockContainer: {
     alignItems: 'center',
@@ -401,27 +402,19 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: COLORS.text,
   },
   navBtn: {
     padding: 4,
   },
   todayBtn: {
-    backgroundColor: COLORS.primary + '15',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: BORDER_RADIUS.sm,
     marginRight: SPACING.xs,
   },
   todayBtnText: {
-    color: COLORS.primary,
     fontSize: 12,
     fontWeight: 'bold',
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.text,
   },
   headerButtons: {
     flexDirection: 'row',
@@ -436,7 +429,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: COLORS.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -444,20 +436,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 4,
-    backgroundColor: COLORS.error + '15',
     borderWidth: 1,
-    borderColor: COLORS.error,
   },
   seedButtonText: {
     fontSize: 9,
-    color: COLORS.error,
     fontWeight: 'bold',
   },
   addButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -467,20 +455,23 @@ const styles = StyleSheet.create({
   emptyContainer: {
     padding: SPACING.xl,
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
   },
   emptyText: {
-    color: COLORS.textSecondary,
     fontSize: 14,
   },
   scheduleItem: {
     flexDirection: 'row',
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   colorBar: {
     width: 6,
-    borderTopLeftRadius: BORDER_RADIUS.md - 1,
-    borderBottomLeftRadius: BORDER_RADIUS.md - 1,
   },
   scheduleCardContent: {
     flex: 1,
@@ -493,11 +484,9 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: COLORS.border,
     marginLeft: SPACING.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.surface,
   },
   completedText: {
     textDecorationLine: 'line-through',
@@ -514,10 +503,8 @@ const styles = StyleSheet.create({
   scheduleTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.text,
   },
   routineBadge: {
-    backgroundColor: COLORS.primary + '20',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -525,12 +512,10 @@ const styles = StyleSheet.create({
   },
   routineBadgeText: {
     fontSize: 10,
-    color: COLORS.primary,
     fontWeight: 'bold',
   },
   scheduleTime: {
     fontSize: 13,
-    color: COLORS.textSecondary,
     marginTop: 2,
   },
 });

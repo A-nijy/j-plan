@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Dimensions, Keyboard } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { SPACING, BORDER_RADIUS } from '../constants/theme';
 import { X, Clock, Check } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TimePickerModal } from './common/TimePickerModal';
 import { ScheduleService } from '../services/ScheduleService';
+import { useTheme } from '../context/ThemeContext';
 
 interface AddRoutineModalProps {
   visible: boolean;
@@ -45,6 +46,7 @@ const WEEKDAYS = [
 
 export default function AddRoutineModal({ visible, onClose, onSave, initialData }: AddRoutineModalProps) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startHour, setStartHour] = useState('09');
@@ -122,7 +124,6 @@ export default function AddRoutineModal({ visible, onClose, onSave, initialData 
     const startTime = `${startHour}:${startMin}`;
     const endTime = `${endHour}:${endMin}`;
 
-    // Overlap check
     try {
       const overlap = await ScheduleService.checkRoutineOverlap(
         selectedDays, 
@@ -177,6 +178,7 @@ export default function AddRoutineModal({ visible, onClose, onSave, initialData 
         <View style={[
             styles.modalContent, 
             { 
+              backgroundColor: colors.background,
               maxHeight: Dimensions.get('window').height - insets.top - SPACING.xl,
               marginTop: insets.top + SPACING.lg,
               paddingBottom: keyboardHeight > 0 
@@ -185,22 +187,23 @@ export default function AddRoutineModal({ visible, onClose, onSave, initialData 
             }
           ]}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>{initialData ? '루틴 수정' : '새 루틴 추가'}</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>{initialData ? '루틴 수정' : '새 루틴 추가'}</Text>
             <TouchableOpacity onPress={onClose}>
-              <X color={COLORS.text} size={24} />
+              <X color={colors.text} size={24} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
-            <Text style={styles.label}>루틴 이름</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>루틴 이름</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
               placeholder="예: 아침 운동, 독서 시간"
+              placeholderTextColor={colors.textSecondary + '80'}
               value={title}
               onChangeText={setTitle}
             />
 
-            <Text style={styles.label}>반복 요일</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>반복 요일</Text>
             <View style={styles.daysContainer}>
               {WEEKDAYS.map((day) => {
                 const isActive = selectedDays.includes(day.value);
@@ -209,11 +212,12 @@ export default function AddRoutineModal({ visible, onClose, onSave, initialData 
                     key={day.value}
                     style={[
                       styles.dayButton,
-                      isActive && { backgroundColor: COLORS.primary, borderColor: COLORS.primary }
+                      { backgroundColor: colors.surface, borderColor: colors.border },
+                      isActive && { backgroundColor: colors.primary, borderColor: colors.primary }
                     ]}
                     onPress={() => toggleDay(day.value)}
                   >
-                    <Text style={[styles.dayButtonText, isActive && { color: 'white' }]}>
+                    <Text style={[styles.dayButtonText, { color: colors.text }, isActive && { color: 'white' }]}>
                       {day.label}
                     </Text>
                   </TouchableOpacity>
@@ -223,29 +227,29 @@ export default function AddRoutineModal({ visible, onClose, onSave, initialData 
 
             <View style={styles.row}>
               <View style={styles.flex1}>
-                <Text style={styles.label}>시작 시간</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>시작 시간</Text>
                 <TouchableOpacity 
-                  style={styles.timeInput}
+                  style={[styles.timeInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   onPress={() => setShowPicker('start')}
                 >
-                  <Clock size={16} color={COLORS.textSecondary} />
-                  <Text style={styles.timeText}>{startHour}:{startMin}</Text>
+                  <Clock size={16} color={colors.textSecondary} />
+                  <Text style={[styles.timeText, { color: colors.text }]}>{startHour}:{startMin}</Text>
                 </TouchableOpacity>
               </View>
               <View style={{ width: SPACING.md }} />
               <View style={styles.flex1}>
-                <Text style={styles.label}>종료 시간</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>종료 시간</Text>
                 <TouchableOpacity 
-                  style={styles.timeInput}
+                  style={[styles.timeInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   onPress={() => setShowPicker('end')}
                 >
-                  <Clock size={16} color={COLORS.textSecondary} />
-                  <Text style={styles.timeText}>{endHour}:{endMin}</Text>
+                  <Clock size={16} color={colors.textSecondary} />
+                  <Text style={[styles.timeText, { color: colors.text }]}>{endHour}:{endMin}</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            <Text style={styles.label}>색상</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>색상</Text>
             <View style={styles.colorContainer}>
               {PRESET_COLORS.map((color) => (
                 <TouchableOpacity
@@ -253,7 +257,7 @@ export default function AddRoutineModal({ visible, onClose, onSave, initialData 
                   style={[
                     styles.colorCircle,
                     { backgroundColor: color },
-                    selectedColor === color && styles.selectedColorCircle
+                    selectedColor === color && [styles.selectedColorCircle, { borderColor: colors.text }]
                   ]}
                   onPress={() => setSelectedColor(color)}
                 >
@@ -262,10 +266,11 @@ export default function AddRoutineModal({ visible, onClose, onSave, initialData 
               ))}
             </View>
 
-            <Text style={styles.label}>설명 (선택)</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>설명 (선택)</Text>
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[styles.input, styles.textArea, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
               placeholder="루틴에 대한 추가 메모를 입력하세요"
+              placeholderTextColor={colors.textSecondary + '80'}
               value={description}
               onChangeText={setDescription}
               multiline
@@ -273,7 +278,7 @@ export default function AddRoutineModal({ visible, onClose, onSave, initialData 
             />
           </ScrollView>
 
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+          <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.primary }]} onPress={handleSave}>
             <Text style={styles.saveButtonText}>루틴 저장</Text>
           </TouchableOpacity>
         </View>
@@ -300,11 +305,7 @@ const styles = StyleSheet.create({
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
   },
-  keyboardView: {
-    width: '100%',
-  },
   modalContent: {
-    backgroundColor: COLORS.background,
     borderTopLeftRadius: BORDER_RADIUS.xl,
     borderTopRightRadius: BORDER_RADIUS.xl,
     padding: SPACING.lg,
@@ -319,7 +320,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: COLORS.text,
   },
   form: {
     marginBottom: SPACING.lg,
@@ -327,18 +327,14 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.textSecondary,
     marginBottom: SPACING.xs,
     marginTop: SPACING.md,
   },
   input: {
-    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
-    color: COLORS.text,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   textArea: {
     height: 80,
@@ -355,15 +351,12 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.surface,
   },
   dayButtonText: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: COLORS.text,
   },
   row: {
     flexDirection: 'row',
@@ -375,16 +368,13 @@ const styles = StyleSheet.create({
   timeInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   timeText: {
     marginLeft: SPACING.sm,
     fontSize: 16,
-    color: COLORS.text,
   },
   colorContainer: {
     flexDirection: 'row',
@@ -402,10 +392,8 @@ const styles = StyleSheet.create({
   },
   selectedColorCircle: {
     borderWidth: 2,
-    borderColor: COLORS.text,
   },
   saveButton: {
-    backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     alignItems: 'center',

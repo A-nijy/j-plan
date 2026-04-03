@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity, ScrollView, Platform, FlatList, Dimensions, Alert, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { SPACING, BORDER_RADIUS } from '../constants/theme';
 import { X, Clock, Check, Calendar, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
@@ -11,6 +11,7 @@ import {
 import { ko } from 'date-fns/locale';
 import { TimePickerModal } from './common/TimePickerModal';
 import { ScheduleService } from '../services/ScheduleService';
+import { useTheme } from '../context/ThemeContext';
 
 interface AddScheduleModalProps {
   visible: boolean;
@@ -60,6 +61,7 @@ interface DatePickerModalProps {
 }
 
 const DatePickerModal = ({ visible, onClose, onSelect, initialDate }: DatePickerModalProps) => {
+  const { colors } = useTheme();
   const [currentMonth, setCurrentMonth] = useState(initialDate);
   const [selectedDate, setSelectedDate] = useState(initialDate);
 
@@ -81,16 +83,16 @@ const DatePickerModal = ({ visible, onClose, onSelect, initialDate }: DatePicker
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.pickerOverlay}>
-        <View style={styles.calendarContent}>
+        <View style={[styles.calendarContent, { backgroundColor: colors.surface }]}>
           <View style={styles.calendarHeader}>
-            <TouchableOpacity onPress={handlePrevMonth} style={styles.navBtn}>
-              <ChevronLeft size={24} color={COLORS.text} />
+            <TouchableOpacity onPress={handlePrevMonth} style={[styles.navBtn, { backgroundColor: colors.background }]}>
+              <ChevronLeft size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.calendarMonthText}>
+            <Text style={[styles.calendarMonthText, { color: colors.text }]}>
               {format(currentMonth, 'yyyy년 M월', { locale: ko })}
             </Text>
-            <TouchableOpacity onPress={handleNextMonth} style={styles.navBtn}>
-              <ChevronRight size={24} color={COLORS.text} />
+            <TouchableOpacity onPress={handleNextMonth} style={[styles.navBtn, { backgroundColor: colors.background }]}>
+              <ChevronRight size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
 
@@ -98,7 +100,7 @@ const DatePickerModal = ({ visible, onClose, onSelect, initialDate }: DatePicker
             <View style={styles.weekdayRow}>
               {weekDayLabels.map(label => (
                 <View key={label} style={styles.weekdayCell}>
-                  <Text style={styles.weekdayText}>{label}</Text>
+                  <Text style={[styles.weekdayText, { color: colors.textSecondary }]}>{label}</Text>
                 </View>
               ))}
             </View>
@@ -110,13 +112,17 @@ const DatePickerModal = ({ visible, onClose, onSelect, initialDate }: DatePicker
                 return (
                   <TouchableOpacity
                     key={idx}
-                    style={[styles.dayCell, isSelected && styles.selectedDayCell]}
+                    style={[
+                      styles.dayCell, 
+                      isSelected && { backgroundColor: colors.primary }
+                    ]}
                     onPress={() => setSelectedDate(day)}
                   >
                     <Text style={[
                       styles.dayText, 
-                      isSelected && styles.selectedDayText,
-                      !isCurrentMonth && styles.otherMonthText
+                      { color: colors.text },
+                      isSelected && { color: '#FFF', fontWeight: 'bold' },
+                      !isCurrentMonth && { color: colors.border }
                     ]}>
                       {format(day, 'd')}
                     </Text>
@@ -127,17 +133,17 @@ const DatePickerModal = ({ visible, onClose, onSelect, initialDate }: DatePicker
           </View>
 
           <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelButtonText}>취소</Text>
+            <TouchableOpacity style={[styles.cancelButton, { backgroundColor: colors.background, borderColor: colors.border }]} onPress={onClose}>
+              <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>취소</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={styles.confirmButtonSmall} 
+              style={[styles.confirmButtonSmall, { backgroundColor: colors.primary }]} 
               onPress={() => {
                 onSelect(selectedDate);
                 onClose();
               }}
             >
-              <Text style={styles.confirmButtonText}>선택</Text>
+              <Text style={[styles.confirmButtonText, { color: '#FFF' }]}>선택</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -150,6 +156,7 @@ export default function AddScheduleModal({
   visible, onClose, onSave, initialDate, showDatePicker = true, initialValues 
 }: AddScheduleModalProps) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startHour, setStartHour] = useState('09');
@@ -220,7 +227,6 @@ export default function AddScheduleModal({
       return;
     }
 
-    // Overlap check
     const startTime = `${startHour}:${startMin}`;
     const endTime = `${endHour}:${endMin}`;
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -266,6 +272,7 @@ export default function AddScheduleModal({
         <View style={[
             styles.modalContent, 
             { 
+              backgroundColor: colors.background,
               maxHeight: Dimensions.get('window').height - insets.top - SPACING.xl,
               marginTop: insets.top + SPACING.lg,
               paddingBottom: keyboardHeight > 0 
@@ -274,32 +281,33 @@ export default function AddScheduleModal({
             }
           ]}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
               {initialValues?.id ? '일정 수정' : '새 일정 추가'}
             </Text>
             <TouchableOpacity onPress={onClose}>
-              <X color={COLORS.text} size={24} />
+              <X color={colors.text} size={24} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
-            <Text style={styles.label}>일정</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>일정</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
               placeholder="일정을 입력하세요"
+              placeholderTextColor={colors.textSecondary + '80'}
               value={title}
               onChangeText={setTitle}
             />
 
             {showDatePicker && (
               <>
-                <Text style={styles.label}>날짜</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>날짜</Text>
                 <TouchableOpacity 
-                  style={styles.dateInput}
+                  style={[styles.dateInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   onPress={() => setShowPicker('date')}
                 >
-                  <Calendar size={18} color={COLORS.textSecondary} />
-                  <Text style={styles.dateText}>
+                  <Calendar size={18} color={colors.textSecondary} />
+                  <Text style={[styles.dateText, { color: colors.text }]}>
                     {format(selectedDate, 'yyyy년 M월 d일 (E)', { locale: ko })}
                   </Text>
                 </TouchableOpacity>
@@ -308,29 +316,29 @@ export default function AddScheduleModal({
 
             <View style={styles.row}>
               <View style={styles.flex1}>
-                <Text style={styles.label}>시작 시간</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>시작 시간</Text>
                 <TouchableOpacity 
-                  style={styles.timeInput}
+                  style={[styles.timeInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   onPress={() => setShowPicker('start')}
                 >
-                  <Clock size={16} color={COLORS.textSecondary} />
-                  <Text style={styles.timeText}>{startHour}:{startMin}</Text>
+                  <Clock size={16} color={colors.textSecondary} />
+                  <Text style={[styles.timeText, { color: colors.text }]}>{startHour}:{startMin}</Text>
                 </TouchableOpacity>
               </View>
               <View style={{ width: SPACING.md }} />
               <View style={styles.flex1}>
-                <Text style={styles.label}>종료 시간</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>종료 시간</Text>
                 <TouchableOpacity 
-                  style={styles.timeInput}
+                  style={[styles.timeInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   onPress={() => setShowPicker('end')}
                 >
-                  <Clock size={16} color={COLORS.textSecondary} />
-                  <Text style={styles.timeText}>{endHour}:{endMin}</Text>
+                  <Clock size={16} color={colors.textSecondary} />
+                  <Text style={[styles.timeText, { color: colors.text }]}>{endHour}:{endMin}</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            <Text style={styles.label}>색상</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>색상</Text>
             <View style={styles.colorContainer}>
               {PRESET_COLORS.map((color) => (
                 <TouchableOpacity
@@ -338,7 +346,7 @@ export default function AddScheduleModal({
                   style={[
                     styles.colorCircle,
                     { backgroundColor: color },
-                    selectedColor.toLowerCase() === color.toLowerCase() && styles.selectedColorCircle
+                    selectedColor.toLowerCase() === color.toLowerCase() && [styles.selectedColorCircle, { borderColor: colors.text }]
                   ]}
                   onPress={() => setSelectedColor(color)}
                 >
@@ -347,10 +355,11 @@ export default function AddScheduleModal({
               ))}
             </View>
 
-            <Text style={styles.label}>설명 (선택)</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>설명 (선택)</Text>
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[styles.input, styles.textArea, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
               placeholder="일정에 대한 추가 메모를 입력하세요"
+              placeholderTextColor={colors.textSecondary + '80'}
               value={description}
               onChangeText={setDescription}
               multiline
@@ -358,8 +367,8 @@ export default function AddScheduleModal({
             />
           </ScrollView>
             
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>
+          <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.primary }]} onPress={handleSave}>
+            <Text style={[styles.saveButtonText, { color: '#FFF' }]}>
               {initialValues?.id ? '변경 완료' : '일정 저장'}
             </Text>
           </TouchableOpacity>
@@ -394,11 +403,7 @@ const styles = StyleSheet.create({
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
   },
-  keyboardView: {
-    width: '100%',
-  },
   modalContent: {
-    backgroundColor: COLORS.background,
     borderTopLeftRadius: BORDER_RADIUS.xl,
     borderTopRightRadius: BORDER_RADIUS.xl,
     padding: SPACING.lg,
@@ -413,7 +418,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: COLORS.text,
   },
   form: {
     marginBottom: SPACING.lg,
@@ -421,33 +425,26 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.textSecondary,
     marginBottom: SPACING.xs,
     marginTop: SPACING.md,
   },
   input: {
-    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
-    color: COLORS.text,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   dateInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
     marginBottom: SPACING.sm,
   },
   dateText: {
     marginLeft: SPACING.sm,
     fontSize: 16,
-    color: COLORS.text,
   },
   textArea: {
     height: 80,
@@ -462,16 +459,13 @@ const styles = StyleSheet.create({
   timeInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   timeText: {
     marginLeft: SPACING.sm,
     fontSize: 16,
-    color: COLORS.text,
   },
   colorContainer: {
     flexDirection: 'row',
@@ -489,16 +483,13 @@ const styles = StyleSheet.create({
   },
   selectedColorCircle: {
     borderWidth: 2,
-    borderColor: COLORS.text,
   },
   saveButton: {
-    backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     alignItems: 'center',
   },
   saveButtonText: {
-    color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -509,7 +500,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   calendarContent: {
-    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.xl,
     width: '90%',
@@ -523,12 +513,10 @@ const styles = StyleSheet.create({
   navBtn: {
     padding: SPACING.xs,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.background,
   },
   calendarMonthText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: COLORS.text,
   },
   calendarGrid: {
     marginBottom: SPACING.md,
@@ -549,7 +537,6 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     fontSize: 12,
     fontWeight: 'bold',
-    color: COLORS.textSecondary,
   },
   daysGrid: {
     flexDirection: 'row',
@@ -562,22 +549,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: BORDER_RADIUS.md,
   },
-  selectedDayCell: {
-    backgroundColor: COLORS.primary,
-  },
   dayText: {
     fontSize: 14,
-    color: COLORS.text,
     textAlign: 'center',
     textAlignVertical: 'center',
     includeFontPadding: false,
-  },
-  selectedDayText: {
-    color: COLORS.surface,
-    fontWeight: 'bold',
-  },
-  otherMonthText: {
-    color: COLORS.border,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -589,24 +565,19 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.background,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   cancelButtonText: {
-    color: COLORS.textSecondary,
     fontWeight: 'bold',
   },
   confirmButtonSmall: {
     flex: 1,
     paddingVertical: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.primary,
     alignItems: 'center',
   },
   confirmButtonText: {
-    color: COLORS.surface,
     fontWeight: 'bold',
   },
 });

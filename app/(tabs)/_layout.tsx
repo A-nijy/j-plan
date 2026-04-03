@@ -1,33 +1,35 @@
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS } from '../../src/constants/theme';
 import { Clock, Calendar, CheckSquare, Settings, Repeat } from 'lucide-react-native';
+import { useTheme } from '../../src/context/ThemeContext';
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textSecondary,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
-          borderTopColor: COLORS.border,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
           height: 60 + insets.bottom,
           paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
           paddingTop: 8,
         },
         headerStyle: {
-          backgroundColor: COLORS.surface,
+          backgroundColor: colors.surface,
           borderBottomWidth: 1,
-          borderBottomColor: COLORS.border,
+          borderBottomColor: colors.border,
           elevation: 0, // Remove Android shadow
           shadowOpacity: 0, // Remove iOS shadow
         },
         headerShadowVisible: false,
         headerTitleStyle: {
           fontWeight: 'bold',
-          color: COLORS.text,
+          color: colors.text,
         },
       }}
     >

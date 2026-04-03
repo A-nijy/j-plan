@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
+import { SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { Plus, Trash2, Clock as ClockIcon } from 'lucide-react-native';
 import { RoutineService } from '../../src/services/RoutineService';
 import { RoutineTemplate } from '../../src/types';
@@ -11,11 +11,13 @@ import { RoutineDetailModal } from '../../src/components/RoutineDetailModal';
 import SwipeableRow from '../../src/components/common/SwipeableRow';
 import OnboardingTooltip from '../../src/components/common/OnboardingTooltip';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../../src/context/ThemeContext';
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
 export default function RoutineScreen() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const [templates, setTemplates] = useState<(RoutineTemplate & { days: number[] })[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -36,12 +38,9 @@ export default function RoutineScreen() {
         })
       );
       
-      // Sort chronologically by start_time
       enrichedTemplates.sort((a, b) => a.start_time.localeCompare(b.start_time));
-      
       setTemplates(enrichedTemplates);
       
-      // Handle tooltip
       if (enrichedTemplates.length > 0) {
         const seen = await AsyncStorage.getItem('tooltip_seen_swipe');
         if (!seen) setShowTooltip(true);
@@ -126,18 +125,18 @@ export default function RoutineScreen() {
             setSelectedTemplate(item);
             setDetailVisible(true);
           }}
-          style={[styles.templateCard, { marginBottom: 0 }]}
+          style={[styles.templateCard, { backgroundColor: colors.surface, marginBottom: 0 }]}
         >
           <View style={[styles.colorBar, { backgroundColor: item.color }]} />
           <View style={styles.cardContent}>
             <View style={styles.cardHeader}>
-              <Text style={styles.templateTitle}>{item.title}</Text>
+              <Text style={[styles.templateTitle, { color: colors.text }]}>{item.title}</Text>
             </View>
             
             <View style={styles.cardDetails}>
               <View style={styles.detailItem}>
-                <ClockIcon size={14} color={COLORS.textSecondary} />
-                <Text style={styles.detailText}>{item.start_time} - {item.end_time}</Text>
+                <ClockIcon size={14} color={colors.textSecondary} />
+                <Text style={[styles.detailText, { color: colors.textSecondary }]}>{item.start_time} - {item.end_time}</Text>
               </View>
             </View>
 
@@ -149,10 +148,15 @@ export default function RoutineScreen() {
                     key={idx} 
                     style={[
                       styles.dayBadge, 
+                      { backgroundColor: colors.background, borderColor: colors.border },
                       isActive && { backgroundColor: item.color + '30', borderColor: item.color }
                     ]}
                   >
-                    <Text style={[styles.dayBadgeText, isActive && { color: COLORS.text, fontWeight: 'bold' }]}>
+                    <Text style={[
+                      styles.dayBadgeText, 
+                      { color: colors.textSecondary },
+                      isActive && { color: colors.text, fontWeight: 'bold' }
+                    ]}>
                       {label}
                     </Text>
                   </View>
@@ -167,38 +171,54 @@ export default function RoutineScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <OnboardingTooltip 
         type="swipe" 
         visible={showTooltip} 
         onClose={() => setShowTooltip(false)} 
       />
-      <View style={styles.filterBar}>
+      <View style={[styles.filterBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterScrollContent}
         >
           <TouchableOpacity 
-            style={[styles.filterBtn, selectedFilterDay === -1 && styles.filterBtnActive]}
+            style={[
+              styles.filterBtn, 
+              { backgroundColor: colors.background, borderColor: colors.border },
+              selectedFilterDay === -1 && { backgroundColor: colors.primary, borderColor: colors.primary }
+            ]}
             onPress={() => setSelectedFilterDay(-1)}
           >
-            <Text style={[styles.filterBtnText, selectedFilterDay === -1 && styles.filterBtnTextActive]}>전체</Text>
+            <Text style={[
+              styles.filterBtnText, 
+              { color: colors.textSecondary },
+              selectedFilterDay === -1 && { color: '#FFF', fontWeight: 'bold' }
+            ]}>전체</Text>
           </TouchableOpacity>
           {DAY_LABELS.map((label, idx) => (
             <TouchableOpacity 
               key={idx}
-              style={[styles.filterBtn, selectedFilterDay === idx && styles.filterBtnActive]}
+              style={[
+                styles.filterBtn, 
+                { backgroundColor: colors.background, borderColor: colors.border },
+                selectedFilterDay === idx && { backgroundColor: colors.primary, borderColor: colors.primary }
+              ]}
               onPress={() => setSelectedFilterDay(idx)}
             >
-              <Text style={[styles.filterBtnText, selectedFilterDay === idx && styles.filterBtnTextActive]}>{label}</Text>
+              <Text style={[
+                styles.filterBtnText, 
+                { color: colors.textSecondary },
+                selectedFilterDay === idx && { color: '#FFF', fontWeight: 'bold' }
+              ]}>{label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 50 }} color={COLORS.primary} />
+        <ActivityIndicator style={{ marginTop: 50 }} color={colors.primary} />
       ) : (
         <FlatList
           data={filteredTemplates}
@@ -207,17 +227,24 @@ export default function RoutineScreen() {
           contentContainerStyle={[styles.listContent, { paddingTop: SPACING.md }]}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                 {selectedFilterDay === -1 ? '등록된 루틴이 없습니다.' : `${DAY_LABELS[selectedFilterDay]}요일 루틴이 없습니다.`}
               </Text>
-              <Text style={styles.emptySubText}>자주 반복되는 일정을 템플릿으로 만들어보세요.</Text>
+              <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>자주 반복되는 일정을 템플릿으로 만들어보세요.</Text>
             </View>
           }
         />
       )}
       
       <TouchableOpacity 
-        style={[styles.fab, { bottom: insets.bottom + SPACING.lg }]}
+        style={[
+          styles.fab, 
+          { 
+            bottom: insets.bottom + SPACING.lg, 
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary 
+          }
+        ]}
         onPress={() => {
           setEditingTemplate(null);
           setModalVisible(true);
@@ -255,7 +282,6 @@ export default function RoutineScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   listContent: {
     padding: SPACING.md,
@@ -263,11 +289,16 @@ const styles = StyleSheet.create({
   },
   templateCard: {
     flexDirection: 'row',
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   colorBar: {
     width: 6,
-    borderTopLeftRadius: BORDER_RADIUS.md - 1,
-    borderBottomLeftRadius: BORDER_RADIUS.md - 1,
   },
   cardContent: {
     flex: 1,
@@ -282,10 +313,6 @@ const styles = StyleSheet.create({
   templateTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  actionButtons: {
-    flexDirection: 'row',
   },
   cardDetails: {
     flexDirection: 'row',
@@ -299,7 +326,6 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 13,
-    color: COLORS.textSecondary,
     marginLeft: 4,
   },
   daysRow: {
@@ -315,12 +341,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 6,
     borderWidth: 1,
-    borderColor: 'transparent',
-    backgroundColor: COLORS.background,
   },
   dayBadgeText: {
     fontSize: 11,
-    color: COLORS.textSecondary,
   },
   emptyContainer: {
     flex: 1,
@@ -330,13 +353,11 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: COLORS.textSecondary,
     fontWeight: '600',
     marginBottom: 8,
   },
   emptySubText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
     opacity: 0.7,
   },
   fab: {
@@ -345,20 +366,16 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 5,
-    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
   },
   filterBar: {
-    backgroundColor: COLORS.surface,
-    paddingVertical: SPACING.xs, // Add padding for symmetry
+    paddingVertical: SPACING.xs,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   filterScrollContent: {
     paddingHorizontal: SPACING.md,
@@ -370,21 +387,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
     marginRight: 8,
-    backgroundColor: COLORS.background,
     borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  filterBtnActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
   },
   filterBtnText: {
     fontSize: 12,
-    color: COLORS.textSecondary,
     fontWeight: '500',
-  },
-  filterBtnTextActive: {
-    color: 'white',
-    fontWeight: 'bold',
   },
 });

@@ -4,12 +4,14 @@ import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { initDatabase } from '../src/services/database';
-import { COLORS } from '../src/constants/theme';
+import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
+import * as SystemUI from 'expo-system-ui';
 
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-export default function RootLayout() {
+function RootLayoutContent() {
   const [dbReady, setDbReady] = useState(false);
+  const { colors, isDark } = useTheme();
 
   useEffect(() => {
     initDatabase()
@@ -22,10 +24,15 @@ export default function RootLayout() {
       });
   }, []);
 
+  useEffect(() => {
+    // Set system-wide background color to match theme
+    SystemUI.setBackgroundColorAsync(colors.background);
+  }, [colors.background]);
+
   if (!dbReady) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#000" />
+      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -33,11 +40,22 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false }}>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <Stack screenOptions={{ 
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background }
+        }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootLayoutContent />
+    </ThemeProvider>
   );
 }

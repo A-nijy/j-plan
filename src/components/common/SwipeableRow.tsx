@@ -2,7 +2,8 @@ import React, { useRef } from 'react';
 import { Animated, StyleSheet, Text, View, I18nManager, TouchableOpacity, Alert } from 'react-native';
 import { RectButton, Swipeable } from 'react-native-gesture-handler';
 import { Trash2 } from 'lucide-react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
+import { SPACING, BORDER_RADIUS } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 interface SwipeableRowProps {
   children: React.ReactNode;
@@ -20,6 +21,7 @@ export default function SwipeableRow({
   containerStyle
 }: SwipeableRowProps) {
   const swipeableRef = useRef<Swipeable>(null);
+  const { colors } = useTheme();
 
   const renderRightActions = (
     _progress: Animated.AnimatedInterpolation<number>,
@@ -47,8 +49,8 @@ export default function SwipeableRow({
         <Animated.View style={{ 
           flex: 1, 
           transform: [{ translateX: trans }],
-          backgroundColor: COLORS.error,
-          marginRight: -10, // Far enough to cover the border and stay flush
+          backgroundColor: colors.error,
+          marginRight: -10,
         }}>
           <RectButton
             style={styles.rightAction}
@@ -70,7 +72,15 @@ export default function SwipeableRow({
       leftThreshold={30}
       rightThreshold={40}
       renderRightActions={renderRightActions}
-      containerStyle={[styles.defaultContainer, containerStyle]}
+      containerStyle={[
+        styles.defaultContainer, 
+        { 
+          backgroundColor: colors.surface, 
+          borderColor: colors.border,
+          shadowColor: colors.text
+        },
+        containerStyle
+      ]}
       childrenContainerStyle={styles.childrenContainer}
     >
       {children}
@@ -80,12 +90,9 @@ export default function SwipeableRow({
 
 const styles = StyleSheet.create({
   defaultContainer: {
-    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
     elevation: 2,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,

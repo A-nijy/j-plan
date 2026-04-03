@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Dimensions, Keyboard } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { SPACING, BORDER_RADIUS } from '../constants/theme';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../context/ThemeContext';
 
 interface AddTodoModalProps {
   visible: boolean;
@@ -19,6 +20,7 @@ interface AddTodoModalProps {
 
 export default function AddTodoModal({ visible, type, initialValues, onClose, onSave }: AddTodoModalProps) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const [content, setContent] = useState('');
   const [description, setDescription] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -81,6 +83,7 @@ export default function AddTodoModal({ visible, type, initialValues, onClose, on
         <View style={[
           styles.modalContent, 
           { 
+            backgroundColor: colors.surface,
             maxHeight: Dimensions.get('window').height - insets.top - SPACING.xl,
             marginTop: insets.top + SPACING.lg,
             paddingBottom: keyboardHeight > 0 
@@ -89,18 +92,19 @@ export default function AddTodoModal({ visible, type, initialValues, onClose, on
           }
         ]}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>{getTitle()}</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>{getTitle()}</Text>
             <TouchableOpacity onPress={onClose}>
-              <X color={COLORS.text} size={24} />
+              <X color={colors.text} size={24} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>제목</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>제목</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}
                 placeholder="제목을 입력하세요"
+                placeholderTextColor={colors.textSecondary + '80'}
                 value={content}
                 onChangeText={setContent}
                 autoFocus
@@ -108,10 +112,11 @@ export default function AddTodoModal({ visible, type, initialValues, onClose, on
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>세부 내용</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>세부 내용</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={[styles.input, styles.textArea, { backgroundColor: colors.background, color: colors.text }]}
                 placeholder="세부 내용을 입력하세요 (선택 사항)"
+                placeholderTextColor={colors.textSecondary + '80'}
                 value={description}
                 onChangeText={setDescription}
                 multiline
@@ -121,8 +126,8 @@ export default function AddTodoModal({ visible, type, initialValues, onClose, on
             </View>
           </View>
 
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>{getButtonText()}</Text>
+          <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.primary }]} onPress={handleSave}>
+            <Text style={[styles.saveButtonText, { color: '#FFF' }]}>{getButtonText()}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -139,11 +144,7 @@ const styles = StyleSheet.create({
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
   },
-  keyboardView: {
-    width: '100%',
-  },
   modalContent: {
-    backgroundColor: COLORS.surface,
     borderTopLeftRadius: BORDER_RADIUS.lg,
     borderTopRightRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
@@ -158,7 +159,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: COLORS.text,
   },
   form: {
     marginBottom: SPACING.md,
@@ -168,28 +168,23 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: COLORS.textSecondary,
     marginBottom: SPACING.xs,
   },
   input: {
-    backgroundColor: COLORS.background,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     fontSize: 16,
-    color: COLORS.text,
   },
   textArea: {
     minHeight: 100,
     paddingTop: SPACING.md,
   },
   saveButton: {
-    backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     alignItems: 'center',
   },
   saveButtonText: {
-    color: COLORS.surface,
     fontSize: 16,
     fontWeight: 'bold',
   },
