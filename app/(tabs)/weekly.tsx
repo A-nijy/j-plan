@@ -29,6 +29,13 @@ export default function WeeklyScreen() {
   const [completionStats, setCompletionStats] = useState<Record<string, { total: number, completed: number }>>({});
   const today = new Date();
   
+  const displayMonth = (() => {
+    const weekStart = new Date(currentWeekStart).setHours(0, 0, 0, 0);
+    const weekEnd = new Date(addDays(currentWeekStart, 6)).setHours(23, 59, 59, 999);
+    const isTodayInWeek = today.getTime() >= weekStart && today.getTime() <= weekEnd;
+    return isTodayInWeek ? startOfMonth(today) : startOfMonth(addDays(currentWeekStart, 3));
+  })();
+
   const loadSettings = useCallback(async () => {
     const data = await WeeklySettingsService.getSettings();
     setSettings(data);
@@ -57,15 +64,14 @@ export default function WeeklyScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      const monthStart = startOfMonth(currentWeekStart);
-      const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
-      const calendarEnd = addDays(startOfWeek(endOfMonth(monthStart), { weekStartsOn: 0 }), 6);
+      const calendarStart = startOfWeek(displayMonth, { weekStartsOn: 0 });
+      const calendarEnd = addDays(startOfWeek(endOfMonth(displayMonth), { weekStartsOn: 0 }), 6);
       
       const startStr = format(calendarStart, 'yyyy-MM-dd');
       const endStr = format(calendarEnd, 'yyyy-MM-dd');
 
       ScheduleService.getCompletionStatsForRange(startStr, endStr).then(setCompletionStats);
-    }, [currentWeekStart])
+    }, [displayMonth])
   );
 
   const moveWeek = (direction: number) => {
@@ -158,9 +164,8 @@ export default function WeeklyScreen() {
   const renderMonthlyCalendar = () => {
     if (settings?.view_mode !== 'combined') return null;
 
-    const monthStart = startOfMonth(currentWeekStart);
-    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
-    const calendarEnd = addDays(startOfWeek(endOfMonth(monthStart), { weekStartsOn: 0 }), 6);
+    const calendarStart = startOfWeek(displayMonth, { weekStartsOn: 0 });
+    const calendarEnd = addDays(startOfWeek(endOfMonth(displayMonth), { weekStartsOn: 0 }), 6);
     const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
     return (
@@ -174,7 +179,7 @@ export default function WeeklyScreen() {
         </View>
         <View style={styles.daysGrid}>
           {days.map((date, i) => {
-            const isCurrentMonth = isSameMonth(date, monthStart);
+            const isCurrentMonth = isSameMonth(date, displayMonth);
             const isSelectedWeek = isSameDay(date, currentWeekStart) || 
                                    (date >= currentWeekStart && date < addDays(currentWeekStart, 7));
             const isToday = isSameDay(date, today);
@@ -190,7 +195,8 @@ export default function WeeklyScreen() {
                   isToday && [styles.todayCell, { backgroundColor: colors.primary }]
                 ]}
                 onPress={() => {
-                  setCurrentWeekStart(startOfWeek(date, { weekStartsOn: 1 }));
+                  const targetStart = startOfWeek(date, { weekStartsOn: 1 });
+                  setCurrentWeekStart(targetStart);
                   setSelectedDay(date.getDay());
                 }}
               >
@@ -241,9 +247,9 @@ export default function WeeklyScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.calendarNav, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View>
-          <Text style={[styles.yearText, { color: colors.textSecondary }]}>{format(currentWeekStart, 'yyyy년')}</Text>
+          <Text style={[styles.yearText, { color: colors.textSecondary }]}>{format(displayMonth, 'yyyy년')}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={[styles.monthText, { color: colors.text }]}>{format(currentWeekStart, 'MMMM', { locale: ko })}</Text>
+            <Text style={[styles.monthText, { color: colors.text }]}>{format(displayMonth, 'MMMM', { locale: ko })}</Text>
             <TouchableOpacity onPress={() => setSettingsVisible(true)}>
               <Settings color={colors.textSecondary} size={18} />
             </TouchableOpacity>
