@@ -17,8 +17,9 @@ export default function SettingsScreen() {
   const [isThemeModalVisible, setIsThemeModalVisible] = useState(false);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: '861751141444-nnt7n7u7n7u7n7u7n7u7.apps.googleusercontent.com', // Placeholder
-    iosClientId: '861751141444-nnt7n7u7n7u7n7u7n7u7.apps.googleusercontent.com', // Placeholder
+    androidClientId: process.env.EXPO_PUBLIC_ANDROID_CLIENT_ID,
+    iosClientId: process.env.EXPO_PUBLIC_IOS_CLIENT_ID,
+    webClientId: process.env.EXPO_PUBLIC_WEB_CLIENT_ID,
     scopes: ['https://www.googleapis.com/auth/drive.appdata'],
   });
 
