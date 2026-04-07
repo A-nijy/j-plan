@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "j-plan",
+    "name": "J플랜",
     "slug": "j-plan",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,7 +11,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "scheme": "j-plan",
+    "scheme": "com.jplan.app",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.jplan.app"

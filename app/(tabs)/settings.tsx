@@ -3,9 +3,10 @@ import { SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 import { Database, Cloud, HelpCircle, Info, RotateCcw, Moon, Sun, Monitor, ChevronRight, Check } from 'lucide-react-native';
 import { clearAllData } from '../../src/services/database';
 import * as Google from 'expo-auth-session/providers/google';
+import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { BackupService } from '../../src/services/BackupService';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useTheme } from '../../src/context/ThemeContext';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -15,12 +16,14 @@ export default function SettingsScreen() {
   const [isBackupLoading, setIsBackupLoading] = useState(false);
   const [lastBackupTime, setLastBackupTime] = useState<string | null>(null);
   const [isThemeModalVisible, setIsThemeModalVisible] = useState(false);
+  const lastProcessedCode = useRef<string | null>(null);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     androidClientId: process.env.EXPO_PUBLIC_ANDROID_CLIENT_ID,
     iosClientId: process.env.EXPO_PUBLIC_IOS_CLIENT_ID,
     webClientId: process.env.EXPO_PUBLIC_WEB_CLIENT_ID,
     scopes: ['https://www.googleapis.com/auth/drive.appdata'],
+    redirectUri: 'com.jplan.app:/settings',
   });
 
   const getThemeText = (mode: string) => {
@@ -47,8 +50,8 @@ export default function SettingsScreen() {
       '정말로 모든 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없으며 모든 일정과 루틴, 투두가 삭제됩니다.',
       [
         { text: '취소', style: 'cancel' },
-        { 
-          text: '초기화', 
+        {
+          text: '초기화',
           style: 'destructive',
           onPress: async () => {
             const success = await clearAllData();
@@ -81,7 +84,7 @@ export default function SettingsScreen() {
       setIsBackupLoading(true);
       await BackupService.restore(token);
       Alert.alert(
-        '복원 성공', 
+        '복원 성공',
         '데이터 복원이 완료되었습니다. 앱의 최신 상태를 반영하기 위해 앱을 재시작해 주세요.',
         [{ text: '확인' }]
       );
@@ -96,29 +99,52 @@ export default function SettingsScreen() {
     if (isBackupLoading) return;
 
     const result = await promptAsync();
-    
+
     if (result?.type === 'success') {
-      const { authentication } = result;
-      if (authentication?.accessToken) {
-        if (action === 'backup') {
-          await executeBackup(authentication.accessToken);
-        } else {
-          Alert.alert(
-            '데이터 복원',
-            '기존 데이터를 구글 드라이브에 저장된 데이터로 덮어씌웁니다. 계속하시겠습니까?',
-            [
-              { text: '취소', style: 'cancel' },
-              { text: '복원', onPress: () => executeRestore(authentication.accessToken) }
-            ]
-          );
+      try {
+        setIsBackupLoading(true);
+        const { code } = result.params;
+        
+        // [중복 요청 방지] 이미 처리된 code라면 중복으로 토큰 교환을 요청하지 않습니다.
+        if (code === lastProcessedCode.current) {
+          console.log('이미 처리된 인증 코드입니다. 중복 요청을 차단합니다.');
+          return;
         }
+        lastProcessedCode.current = code;
+        
+        // [핵심] 번호표(code)를 진짜 토큰으로 교환합니다.
+        const tokenResponse = await AuthSession.exchangeCodeAsync({
+          clientId: process.env.EXPO_PUBLIC_ANDROID_CLIENT_ID || '',
+          code,
+          redirectUri: 'com.jplan.app:/settings',
+          extraParams: request?.codeVerifier ? { code_verifier: request.codeVerifier } : undefined,
+        }, Google.discovery);
+
+        if (tokenResponse.accessToken) {
+          if (action === 'backup') {
+            await executeBackup(tokenResponse.accessToken);
+          } else {
+            Alert.alert(
+              '데이터 복원',
+              '기존 데이터를 구글 드라이브에 저장된 데이터로 덮어씌웁니다. 계속하시겠습니까?',
+              [
+                { text: '취소', style: 'cancel' },
+                { text: '복원', onPress: () => executeRestore(tokenResponse.accessToken) }
+              ]
+            );
+          }
+        }
+      } catch (error: any) {
+        Alert.alert('토큰 교환 실패', error.message || '인증 정보를 가져오는 중 오류가 발생했습니다.');
+      } finally {
+        setIsBackupLoading(false);
       }
     }
   };
 
   const MenuItem = ({ icon: Icon, title, subtitle, onPress, rightText }: any) => (
-    <TouchableOpacity 
-      style={[styles.menuItem, { backgroundColor: colors.surface }]} 
+    <TouchableOpacity
+      style={[styles.menuItem, { backgroundColor: colors.surface }]}
       onPress={onPress}
     >
       <View style={[styles.iconContainer, { backgroundColor: colors.background }]}>
@@ -142,20 +168,20 @@ export default function SettingsScreen() {
       animationType="fade"
       onRequestClose={() => setIsThemeModalVisible(false)}
     >
-      <Pressable 
-        style={styles.modalOverlay} 
+      <Pressable
+        style={styles.modalOverlay}
         onPress={() => setIsThemeModalVisible(false)}
       >
-        <Pressable 
-          style={[styles.modalContent, { backgroundColor: colors.surface }]} 
-          onPress={() => {}} // Prevent closing when clicking content
+        <Pressable
+          style={[styles.modalContent, { backgroundColor: colors.surface }]}
+          onPress={() => { }} // Prevent closing when clicking content
         >
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>테마 설정</Text>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.optionItem} 
+
+          <TouchableOpacity
+            style={styles.optionItem}
             onPress={() => { setThemeMode('light'); setIsThemeModalVisible(false); }}
           >
             <View style={[styles.optionIcon, { backgroundColor: colors.background }]}>
@@ -165,8 +191,8 @@ export default function SettingsScreen() {
             {themeMode === 'light' && <Check color={colors.primary} size={20} />}
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.optionItem} 
+          <TouchableOpacity
+            style={styles.optionItem}
             onPress={() => { setThemeMode('dark'); setIsThemeModalVisible(false); }}
           >
             <View style={[styles.optionIcon, { backgroundColor: colors.background }]}>
@@ -176,8 +202,8 @@ export default function SettingsScreen() {
             {themeMode === 'dark' && <Check color={colors.primary} size={20} />}
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.optionItem} 
+          <TouchableOpacity
+            style={styles.optionItem}
             onPress={() => { setThemeMode('system'); setIsThemeModalVisible(false); }}
           >
             <View style={[styles.optionIcon, { backgroundColor: colors.background }]}>
@@ -187,8 +213,8 @@ export default function SettingsScreen() {
             {themeMode === 'system' && <Check color={colors.primary} size={20} />}
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.closeButton, { backgroundColor: colors.background }]} 
+          <TouchableOpacity
+            style={[styles.closeButton, { backgroundColor: colors.background }]}
             onPress={() => setIsThemeModalVisible(false)}
           >
             <Text style={[styles.closeButtonText, { color: colors.text }]}>닫기</Text>
@@ -199,28 +225,28 @@ export default function SettingsScreen() {
   );
 
   return (
-    <ScrollView 
+    <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={{ paddingBottom: 100 }}
     >
 
       <View style={styles.section}>
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>백업 및 데이터</Text>
-        <MenuItem 
-          icon={Cloud} 
-          title="Google Drive 백업" 
+        <MenuItem
+          icon={Cloud}
+          title="Google Drive 백업"
           subtitle={isBackupLoading ? "진행 중..." : (lastBackupTime ? `최근 백업: ${lastBackupTime}` : "데이터를 구글 드라이브에 저장")}
           onPress={() => handleAuthAndAction('backup')}
         />
-        <MenuItem 
-          icon={RotateCcw} 
-          title="Google Drive 복원" 
+        <MenuItem
+          icon={RotateCcw}
+          title="Google Drive 복원"
           subtitle="드라이브 백업 데이터로 복원합니다."
           onPress={() => handleAuthAndAction('restore')}
         />
-        <MenuItem 
-          icon={Database} 
-          title="데이터 초기화" 
+        <MenuItem
+          icon={Database}
+          title="데이터 초기화"
           subtitle="모든 일정과 투두 데이터를 삭제합니다."
           onPress={handleReset}
         />
@@ -228,23 +254,23 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>화면 설정</Text>
-        <MenuItem 
-          icon={getThemeIcon(themeMode)} 
-          title="테마 설정" 
+        <MenuItem
+          icon={getThemeIcon(themeMode)}
+          title="테마 설정"
           rightText={getThemeText(themeMode)}
           onPress={() => setIsThemeModalVisible(true)}
         />
       </View>
-      
+
       <View style={styles.section}>
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>정보</Text>
-        <MenuItem 
-          icon={HelpCircle} 
-          title="사용 방법" 
+        <MenuItem
+          icon={HelpCircle}
+          title="사용 방법"
         />
-        <MenuItem 
-          icon={Info} 
-          title="버전 정보" 
+        <MenuItem
+          icon={Info}
+          title="버전 정보"
           subtitle="v1.0.0"
         />
       </View>
