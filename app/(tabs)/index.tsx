@@ -20,30 +20,36 @@ import OnboardingTooltip from '../../src/components/common/OnboardingTooltip';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../src/context/ThemeContext';
 
+import { useDateNavigation } from '../../src/hooks/useDateNavigation';
+import { useSchedules } from '../../src/hooks/useSchedules';
+import { useTodaySettings } from '../../src/hooks/useTodaySettings';
+
 export default function TodayScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation();
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  
+  // Custom Hooks
+  const { selectedDate, dateStr, moveDate, setToday, setSelectedDate } = useDateNavigation();
+  const { settings, loadSettings, toggleClock } = useTodaySettings();
+  const {
+    schedules,
+    hasDeletedRoutines,
+    showTooltip,
+    setShowTooltip,
+    loadSchedules,
+    handleSaveSchedule,
+    handleDeleteSchedule,
+    toggleCompletion,
+    progressPercentage,
+    chartData
+  } = useSchedules(dateStr);
+
+  // UI States (Modals)
   const [modalVisible, setModalVisible] = useState(false);
   const [initialValues, setInitialValues] = useState<any>(null);
-  const [settings, setSettings] = useState<WeeklySettings | null>(null);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
   const [restoreVisible, setRestoreVisible] = useState(false);
-  const [hasDeletedRoutines, setHasDeletedRoutines] = useState(false);
-  const [showTooltip, setShowTooltip] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const dateStr = format(selectedDate, 'yyyy-MM-dd');
-
-  const loadSettings = async () => {
-    const data = await WeeklySettingsService.getSettings();
-    setSettings(data);
-  };
-
-  const moveDate = (offset: number) => {
-    setSelectedDate(prev => offset > 0 ? addDays(prev, offset) : subDays(prev, -offset));
-  };
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -65,82 +71,24 @@ export default function TodayScreen() {
         </TouchableOpacity>
       ),
     });
-  }, [navigation, colors]);
-
-  const toggleClock = async () => {
-    if (!settings) return;
-    const newShowClock = settings.show_circular_clock === 1 ? 0 : 1;
-    await WeeklySettingsService.updateSettings({ show_circular_clock: newShowClock });
-    await loadSettings();
-  };
+  }, [navigation, colors, loadSchedules]);
 
   useFocusEffect(
     useCallback(() => {
       loadSettings();
       loadSchedules();
-      checkDeletedRoutines();
-      checkTooltip();
-    }, [dateStr])
+    }, [loadSettings, loadSchedules])
   );
 
-  const checkTooltip = async () => {
-    const seen = await AsyncStorage.getItem('tooltip_seen_swipe');
-    if (!seen) {
-    }
-  };
-
-  const checkDeletedRoutines = async () => {
-    try {
-      const deleted = await RoutineService.getDeletedRoutinesForDate(dateStr);
-      setHasDeletedRoutines(deleted.length > 0);
-    } catch (error) {
-      console.error('Failed to check deleted routines:', error);
-    }
-  };
-
-  const loadSchedules = async () => {
-    try {
-      const data = await ScheduleService.getSchedulesForDate(dateStr);
-      setSchedules(data);
-      checkDeletedRoutines();
-      
-      if (data.length > 0) {
-        const seen = await AsyncStorage.getItem('tooltip_seen_swipe');
-        if (!seen) setShowTooltip(true);
-      }
-    } catch (error) {
-      console.error('Failed to load schedules:', error);
-    }
-  };
-
-  const handleAddSchedule = async (newSchedule: {
-    title: string;
-    description: string;
-    start_time: string;
-    end_time: string;
-    color: string;
-    target_date: string;
-  }) => {
-    try {
-      if (initialValues?.id) {
-        if (initialValues.is_routine) {
-          const templateId = initialValues.id.split('::')[1];
-          await ScheduleService.excludeRoutineFromDate(templateId, dateStr);
-        } else {
-          await ScheduleService.deleteScheduleAtDate(initialValues.id);
-        }
-      }
-
-      await ScheduleService.createSchedule(newSchedule);
+  const onSaveSchedule = async (newSchedule: any) => {
+    const success = await handleSaveSchedule(newSchedule, initialValues);
+    if (success) {
       setModalVisible(false);
       setInitialValues(null);
-      loadSchedules();
-    } catch (error) {
-      Alert.alert('오류', '일정을 저장하지 못했습니다.');
     }
   };
 
-  const handleEditSchedule = (schedule: Schedule) => {
+  const onEditSchedule = (schedule: Schedule) => {
     setDetailVisible(false);
     setInitialValues({
       id: schedule.id,
@@ -154,57 +102,15 @@ export default function TodayScreen() {
     setModalVisible(true);
   };
 
-  const handlePressSchedule = (schedule: Schedule) => {
+  const onPressSchedule = (schedule: Schedule) => {
     setSelectedSchedule(schedule);
     setDetailVisible(true);
   };
 
-  const handleDeleteSchedule = async (schedule: Schedule) => {
-    try {
-      if (schedule.is_routine) {
-        const templateId = schedule.id.split('::')[1];
-        await ScheduleService.excludeRoutineFromDate(templateId, dateStr);
-      } else {
-        await ScheduleService.deleteScheduleAtDate(schedule.id);
-      }
-      setDetailVisible(false);
-      loadSchedules();
-    } catch (error) {
-      Alert.alert('오류', '삭제하지 못했습니다.');
-    }
+  const onDelete = async (schedule: Schedule) => {
+    const success = await handleDeleteSchedule(schedule);
+    if (success) setDetailVisible(false);
   };
-
-  const toggleCompletion = async (schedule: Schedule) => {
-    try {
-      await ScheduleService.toggleScheduleCompletion(
-        schedule.id,
-        dateStr,
-        !!schedule.is_routine,
-        !!schedule.is_completed
-      );
-      loadSchedules();
-    } catch (error) {
-      Alert.alert('오류', '상태를 변경하지 못했습니다.');
-    }
-  };
-
-  const completedCount = schedules.filter(s => s.is_completed).length;
-  const totalCount = schedules.length;
-  const progressPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-
-  const chartData = schedules.map(s => ({
-    startHour: (timeStr => {
-      const [hours, minutes] = timeStr.split(':').map(Number);
-      return hours + minutes / 60;
-    })(s.start_time),
-    endHour: ((timeStr, isEnd) => {
-      const [hours, minutes] = timeStr.split(':').map(Number);
-      if (isEnd && hours === 0 && minutes === 0) return 24.0;
-      return hours + minutes / 60;
-    })(s.end_time, true),
-    color: s.color,
-    label: s.title,
-  }));
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -290,7 +196,7 @@ export default function TodayScreen() {
                 >
                   <TouchableOpacity 
                     activeOpacity={0.7} 
-                    onPress={() => handlePressSchedule(item)}
+                    onPress={() => onPressSchedule(item)}
                     style={[styles.scheduleItem, { backgroundColor: colors.surface, marginBottom: 0 }]}
                   >
                     <View style={[styles.colorBar, { backgroundColor: item.color }]} />
@@ -337,7 +243,7 @@ export default function TodayScreen() {
           setModalVisible(false);
           setInitialValues(null);
         }}
-        onSave={handleAddSchedule}
+        onSave={onSaveSchedule}
         showDatePicker={false}
         initialDate={dateStr}
         initialValues={initialValues}
@@ -347,8 +253,8 @@ export default function TodayScreen() {
         visible={detailVisible}
         onClose={() => setDetailVisible(false)}
         schedule={selectedSchedule}
-        onDelete={handleDeleteSchedule}
-        onEdit={handleEditSchedule}
+        onDelete={onDelete}
+        onEdit={onEditSchedule}
         onToggleCompletion={async (schedule) => {
           await toggleCompletion(schedule);
           setSelectedSchedule(prev => prev ? { ...prev, is_completed: !prev.is_completed } : null);

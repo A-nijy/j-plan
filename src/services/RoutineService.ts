@@ -1,10 +1,10 @@
 import * as Crypto from 'expo-crypto';
-import { getDb } from './database';
+import { DatabaseService } from './database';
 import { RoutineTemplate, RoutineConfig } from '../types';
 
 export class RoutineService {
   static async getDb() {
-    const db = await getDb();
+    const db = await DatabaseService.getDb();
     if (!db) throw new Error('Database not initialized');
     return db;
   }

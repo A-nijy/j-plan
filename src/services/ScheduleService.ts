@@ -1,12 +1,12 @@
 import * as SQLite from 'expo-sqlite';
 import * as Crypto from 'expo-crypto';
 import { Schedule } from '../types';
-import { getDb } from './database';
+import { DatabaseService } from './database';
 import { RoutineService } from './RoutineService';
 
 export class ScheduleService {
   static async getDb() {
-    const db = await getDb();
+    const db = await DatabaseService.getDb();
     if (!db) throw new Error('Database not initialized');
     return db;
   }

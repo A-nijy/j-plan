@@ -1,13 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import { getDb } from './database';
 
-// Google Drive API endpoints
-const DRIVE_API_URL = 'https://www.googleapis.com/drive/v3/files';
-const UPLOAD_API_URL = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-
-const DB_NAME = 'jplan.db';
-// Standard expo-sqlite path: documentDirectory + '/SQLite/' + name
-const DB_PATH = `${FileSystem.documentDirectory}SQLite/${DB_NAME}`;
 
 export interface BackupMetadata {
   id: string;
@@ -16,12 +8,17 @@ export interface BackupMetadata {
 }
 
 export class BackupService {
+  private static readonly DRIVE_API_URL = 'https://www.googleapis.com/drive/v3/files';
+  private static readonly UPLOAD_API_URL = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+  private static readonly DB_NAME = 'jplan.db';
+  private static readonly DB_PATH = `${FileSystem.documentDirectory}SQLite/jplan.db`;
+
   /**
    * Finds the latest backup file in the appDataFolder on Google Drive
    */
   static async findBackupFile(accessToken: string): Promise<BackupMetadata | null> {
-    const query = encodeURIComponent("name = '" + DB_NAME + "' and 'appDataFolder' in parents and trashed = false");
-    const url = `${DRIVE_API_URL}?q=${query}&spaces=appDataFolder&fields=files(id, name, modifiedTime)&orderBy=modifiedTime desc`;
+    const query = encodeURIComponent(`name = '${this.DB_NAME}' and 'appDataFolder' in parents and trashed = false`);
+    const url = `${this.DRIVE_API_URL}?q=${query}&spaces=appDataFolder&fields=files(id, name, modifiedTime)&orderBy=modifiedTime desc`;
 
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -43,13 +40,13 @@ export class BackupService {
   static async backup(accessToken: string) {
     try {
       // 1. Check if DB file exists
-      const fileInfo = await FileSystem.getInfoAsync(DB_PATH);
+      const fileInfo = await FileSystem.getInfoAsync(this.DB_PATH);
       if (!fileInfo.exists) {
         throw new Error('백업할 데이터베이스 파일이 존재하지 않습니다.');
       }
 
       // 2. Read file as Base64 (multipart upload requires raw bytes or base64)
-      const base64Content = await FileSystem.readAsStringAsync(DB_PATH, {
+      const base64Content = await FileSystem.readAsStringAsync(this.DB_PATH, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
@@ -57,7 +54,7 @@ export class BackupService {
       const existingFile = await this.findBackupFile(accessToken);
 
       const metadata = {
-        name: DB_NAME,
+        name: this.DB_NAME,
         parents: existingFile ? undefined : ['appDataFolder'],
       };
 
@@ -78,7 +75,7 @@ export class BackupService {
 
       const url = existingFile 
         ? `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=multipart`
-        : UPLOAD_API_URL;
+        : this.UPLOAD_API_URL;
 
       const response = await fetch(url, {
         method: existingFile ? 'PATCH' : 'POST',
@@ -114,7 +111,7 @@ export class BackupService {
       }
 
       // 2. Download media content
-      const downloadResponse = await fetch(`${DRIVE_API_URL}/${backup.id}?alt=media`, {
+      const downloadResponse = await fetch(`${this.DRIVE_API_URL}/${backup.id}?alt=media`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
@@ -139,7 +136,7 @@ export class BackupService {
       // But overwriting usually works if not actively writing.
 
       // 6. Overwrite
-      await FileSystem.writeAsStringAsync(DB_PATH, base64Data, {
+      await FileSystem.writeAsStringAsync(this.DB_PATH, base64Data, {
         encoding: FileSystem.EncodingType.Base64,
       });
 

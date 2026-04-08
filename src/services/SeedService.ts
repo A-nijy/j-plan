@@ -1,9 +1,9 @@
 import * as Crypto from 'expo-crypto';
-import { getDb } from './database';
+import { DatabaseService } from './database';
 
 export class SeedService {
   static async seedTestData() {
-    const db = await getDb();
+    const db = await DatabaseService.getDb();
     if (!db) return;
 
     console.log('Starting seed process...');

@@ -6,8 +6,9 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { BackupService } from '../../src/services/BackupService';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useGoogleAuth } from '../../src/hooks/useGoogleAuth';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -16,15 +17,8 @@ export default function SettingsScreen() {
   const [isBackupLoading, setIsBackupLoading] = useState(false);
   const [lastBackupTime, setLastBackupTime] = useState<string | null>(null);
   const [isThemeModalVisible, setIsThemeModalVisible] = useState(false);
-  const lastProcessedCode = useRef<string | null>(null);
-
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: process.env.EXPO_PUBLIC_ANDROID_CLIENT_ID,
-    iosClientId: process.env.EXPO_PUBLIC_IOS_CLIENT_ID,
-    webClientId: process.env.EXPO_PUBLIC_WEB_CLIENT_ID,
-    scopes: ['https://www.googleapis.com/auth/drive.appdata'],
-    redirectUri: 'com.jplan.app:/settings',
-  });
+  
+  const { signInAndGetToken, isAuthLoading: isAuthProcessing } = useGoogleAuth();
 
   const getThemeText = (mode: string) => {
     switch (mode) {
@@ -69,7 +63,6 @@ export default function SettingsScreen() {
       setIsBackupLoading(true);
       await BackupService.backup(token);
       Alert.alert('백업 성공', '데이터가 구글 드라이브에 안전하게 저장되었습니다.');
-      // Update last backup info
       const info = await BackupService.findBackupFile(token);
       if (info) setLastBackupTime(new Date(info.modifiedTime).toLocaleString('ko-KR'));
     } catch (error: any) {
@@ -96,48 +89,22 @@ export default function SettingsScreen() {
   };
 
   const handleAuthAndAction = async (action: 'backup' | 'restore') => {
-    if (isBackupLoading) return;
+    if (isBackupLoading || isAuthProcessing) return;
 
-    const result = await promptAsync();
-
-    if (result?.type === 'success') {
-      try {
-        setIsBackupLoading(true);
-        const { code } = result.params;
-        
-        // [중복 요청 방지] 이미 처리된 code라면 중복으로 토큰 교환을 요청하지 않습니다.
-        if (code === lastProcessedCode.current) {
-          console.log('이미 처리된 인증 코드입니다. 중복 요청을 차단합니다.');
-          return;
-        }
-        lastProcessedCode.current = code;
-        
-        // [핵심] 번호표(code)를 진짜 토큰으로 교환합니다.
-        const tokenResponse = await AuthSession.exchangeCodeAsync({
-          clientId: process.env.EXPO_PUBLIC_ANDROID_CLIENT_ID || '',
-          code,
-          redirectUri: 'com.jplan.app:/settings',
-          extraParams: request?.codeVerifier ? { code_verifier: request.codeVerifier } : undefined,
-        }, Google.discovery);
-
-        if (tokenResponse.accessToken) {
-          if (action === 'backup') {
-            await executeBackup(tokenResponse.accessToken);
-          } else {
-            Alert.alert(
-              '데이터 복원',
-              '기존 데이터를 구글 드라이브에 저장된 데이터로 덮어씌웁니다. 계속하시겠습니까?',
-              [
-                { text: '취소', style: 'cancel' },
-                { text: '복원', onPress: () => executeRestore(tokenResponse.accessToken) }
-              ]
-            );
-          }
-        }
-      } catch (error: any) {
-        Alert.alert('토큰 교환 실패', error.message || '인증 정보를 가져오는 중 오류가 발생했습니다.');
-      } finally {
-        setIsBackupLoading(false);
+    const accessToken = await signInAndGetToken();
+    
+    if (accessToken) {
+      if (action === 'backup') {
+        await executeBackup(accessToken);
+      } else {
+        Alert.alert(
+          '데이터 복원',
+          '기존 데이터를 구글 드라이브에 저장된 데이터로 덮어씌웁니다. 계속하시겠습니까?',
+          [
+            { text: '취소', style: 'cancel' },
+            { text: '복원', onPress: () => executeRestore(accessToken) }
+          ]
+        );
       }
     }
   };
