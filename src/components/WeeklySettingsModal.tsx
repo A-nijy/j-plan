@@ -22,8 +22,8 @@ const INTERVALS = [
 ];
 
 const VIEW_MODES = [
-  { label: '기본 (달력+시간표)', value: 'combined' },
-  { label: '시간표만 크게 보기', value: 'expanded' },
+  { label: '기본 (달력+일정표)', value: 'combined' },
+  { label: '일정표만 크게 보기', value: 'expanded' },
 ];
 
 export const WeeklySettingsModal: React.FC<WeeklySettingsModalProps> = ({ visible, onClose, settings, onSave }) => {
@@ -67,7 +67,7 @@ export const WeeklySettingsModal: React.FC<WeeklySettingsModalProps> = ({ visibl
           }
         ]}>
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>주간 시간표 설정</Text>
+            <Text style={[styles.title, { color: colors.text }]}>주간 일정표 설정</Text>
             <TouchableOpacity onPress={onClose}>
               <X color={colors.text} size={24} />
             </TouchableOpacity>

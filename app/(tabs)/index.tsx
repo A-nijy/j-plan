@@ -10,7 +10,6 @@ import AddScheduleModal from '../../src/components/AddScheduleModal';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { ScheduleDetailModal } from '../../src/components/ScheduleDetailModal';
 import RestoreRoutineModal from '../../src/components/RestoreRoutineModal';
-import { SeedService } from '../../src/services/SeedService';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useDateNavigation } from '../../src/hooks/useDateNavigation';
 import { useSchedules } from '../../src/hooks/useSchedules';
@@ -56,27 +55,7 @@ export default function TodayScreen() {
     }, [loadSettings, loadSchedules])
   );
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity 
-          style={[
-            styles.seedButton, 
-            { backgroundColor: colors.error + '15', borderColor: colors.error }
-          ]}
-          onPress={async () => {
-            const success = await SeedService.seedTestData();
-            if (success) {
-              Alert.alert('성공', '테스트 데이터가 생성되었습니다.');
-              loadSchedules();
-            }
-          }}
-        >
-          <Text style={[styles.seedButtonText, { color: colors.error }]}>SEED</Text>
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, colors, loadSchedules]);
+
 
   // 2. Memoized Callback Handlers to prevent ScheduleItem re-renders
   const handleItemPress = useCallback((schedule: Schedule) => {
@@ -314,17 +293,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  seedButton: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
-    borderWidth: 1,
-    marginRight: SPACING.md,
-  },
-  seedButtonText: {
-    fontSize: 9,
-    fontWeight: 'bold',
-  },
+
   addButton: {
     width: 32,
     height: 32,

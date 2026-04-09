@@ -10,6 +10,7 @@ import React, { useState } from 'react';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useGoogleAuth } from '../../src/hooks/useGoogleAuth';
 import FullLoadingOverlay from '../../src/components/common/FullLoadingOverlay';
+import HowToUseModal from '../../src/components/HowToUseModal';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -18,6 +19,7 @@ export default function SettingsScreen() {
   const [isBackupLoading, setIsBackupLoading] = useState(false);
   const [lastBackupTime, setLastBackupTime] = useState<string | null>(null);
   const [isThemeModalVisible, setIsThemeModalVisible] = useState(false);
+  const [isHowToUseVisible, setIsHowToUseVisible] = useState(false);
   
   const { 
     signInAndGetToken, 
@@ -245,6 +247,7 @@ export default function SettingsScreen() {
         <MenuItem
           icon={HelpCircle}
           title="사용 방법"
+          onPress={() => setIsHowToUseVisible(true)}
         />
         <MenuItem
           icon={Info}
@@ -259,6 +262,11 @@ export default function SettingsScreen() {
         visible={isBackupLoading || isAuthProcessing} 
         message={isAuthProcessing ? "Google 인증 중..." : "데이터 백업/복원 중..."}
         onForceClose={handleForceClose}
+      />
+
+      <HowToUseModal 
+        visible={isHowToUseVisible} 
+        onClose={() => setIsHowToUseVisible(false)} 
       />
     </ScrollView>
   );

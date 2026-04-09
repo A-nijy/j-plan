@@ -45,7 +45,7 @@ export default function TabsLayout() {
         name="weekly"
         options={{
           title: '주간',
-          headerTitle: '주간 시간표',
+          headerTitle: '주간 일정표',
           tabBarIcon: ({ color, size }) => <Calendar color={color} size={size} />,
         }}
       />
