@@ -9,6 +9,7 @@ import { BackupService } from '../../src/services/BackupService';
 import React, { useState } from 'react';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useGoogleAuth } from '../../src/hooks/useGoogleAuth';
+import FullLoadingOverlay from '../../src/components/common/FullLoadingOverlay';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -18,7 +19,17 @@ export default function SettingsScreen() {
   const [lastBackupTime, setLastBackupTime] = useState<string | null>(null);
   const [isThemeModalVisible, setIsThemeModalVisible] = useState(false);
   
-  const { signInAndGetToken, isAuthLoading: isAuthProcessing } = useGoogleAuth();
+  const { 
+    signInAndGetToken, 
+    isAuthLoading: isAuthProcessing,
+    resetAuthLoading 
+  } = useGoogleAuth();
+
+  const handleForceClose = () => {
+    setIsBackupLoading(false);
+    resetAuthLoading();
+    Alert.alert('작업 취소', '작업이 중단되었습니다.');
+  };
 
   const getThemeText = (mode: string) => {
     switch (mode) {
@@ -243,6 +254,12 @@ export default function SettingsScreen() {
       </View>
 
       <ThemeSelectionModal />
+
+      <FullLoadingOverlay 
+        visible={isBackupLoading || isAuthProcessing} 
+        message={isAuthProcessing ? "Google 인증 중..." : "데이터 백업/복원 중..."}
+        onForceClose={handleForceClose}
+      />
     </ScrollView>
   );
 }

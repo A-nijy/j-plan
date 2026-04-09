@@ -102,5 +102,6 @@ export const useGoogleAuth = () => {
   return {
     signInAndGetToken,
     isAuthLoading,
+    resetAuthLoading: () => setIsAuthLoading(false),
   };
 };
