@@ -217,7 +217,7 @@ export default function HabitHistoryModal({ visible, onClose, todo }: HabitHisto
                   </View>
                 ) : (
                   <>
-                    <div style={styles.contentWrap}>
+                    <View style={styles.contentWrap}>
                       <Text style={[styles.contentLabel, { color: colors.textSecondary }]}>제목</Text>
                       <Text style={[styles.activeContentText, { color: colors.text, fontWeight: '700', marginBottom: SPACING.sm }]}>
                         {activeContent.content}
@@ -231,7 +231,7 @@ export default function HabitHistoryModal({ visible, onClose, todo }: HabitHisto
                       ]}>
                         {activeContent.description || '(내용 없음)'}
                       </Text>
-                    </div>
+                    </View>
                   </>
                 )}
               </View>

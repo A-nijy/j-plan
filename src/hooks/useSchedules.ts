@@ -34,7 +34,7 @@ export const useSchedules = (dateStr: string) => {
     }
   }, [dateStr, checkDeletedRoutines]);
 
-  const handleSaveSchedule = async (newSchedule: any, initialValues: any) => {
+  const handleSaveSchedule = useCallback(async (newSchedule: any, initialValues: any) => {
     try {
       if (initialValues?.id) {
         if (initialValues.is_routine) {
@@ -52,9 +52,9 @@ export const useSchedules = (dateStr: string) => {
       Alert.alert('오류', '일정을 저장하지 못했습니다.');
       return false;
     }
-  };
+  }, [dateStr, loadSchedules]);
 
-  const handleDeleteSchedule = async (schedule: Schedule) => {
+  const handleDeleteSchedule = useCallback(async (schedule: Schedule) => {
     try {
       if (schedule.is_routine) {
         const templateId = schedule.id.split('::')[1];
@@ -68,9 +68,9 @@ export const useSchedules = (dateStr: string) => {
       Alert.alert('오류', '삭제하지 못했습니다.');
       return false;
     }
-  };
+  }, [dateStr, loadSchedules]);
 
-  const toggleCompletion = async (schedule: Schedule) => {
+  const toggleCompletion = useCallback(async (schedule: Schedule) => {
     try {
       await ScheduleService.toggleScheduleCompletion(
         schedule.id,
@@ -82,7 +82,7 @@ export const useSchedules = (dateStr: string) => {
     } catch (error) {
       Alert.alert('오류', '상태를 변경하지 못했습니다.');
     }
-  };
+  }, [dateStr, loadSchedules]);
 
   const progressPercentage = useMemo(() => {
     const totalCount = schedules.length;
