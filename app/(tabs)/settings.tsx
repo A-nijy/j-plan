@@ -125,7 +125,7 @@ export default function SettingsScreen() {
       style={[styles.menuItem, { backgroundColor: colors.surface }]}
       onPress={onPress}
     >
-      <View style={[styles.iconContainer, { backgroundColor: colors.background }]}>
+      <View style={styles.iconContainer}>
         <Icon color={colors.primary} size={22} />
       </View>
       <View style={styles.menuTextContainer}>
@@ -162,7 +162,7 @@ export default function SettingsScreen() {
             style={styles.optionItem}
             onPress={() => { setThemeMode('light'); setIsThemeModalVisible(false); }}
           >
-            <View style={[styles.optionIcon, { backgroundColor: colors.background }]}>
+            <View style={styles.optionIcon}>
               <Sun color={colors.primary} size={20} />
             </View>
             <Text style={[styles.optionText, { color: colors.text }]}>라이트 모드</Text>
@@ -173,7 +173,7 @@ export default function SettingsScreen() {
             style={styles.optionItem}
             onPress={() => { setThemeMode('dark'); setIsThemeModalVisible(false); }}
           >
-            <View style={[styles.optionIcon, { backgroundColor: colors.background }]}>
+            <View style={styles.optionIcon}>
               <Moon color={colors.primary} size={20} />
             </View>
             <Text style={[styles.optionText, { color: colors.text }]}>다크 모드</Text>
@@ -184,7 +184,7 @@ export default function SettingsScreen() {
             style={styles.optionItem}
             onPress={() => { setThemeMode('system'); setIsThemeModalVisible(false); }}
           >
-            <View style={[styles.optionIcon, { backgroundColor: colors.background }]}>
+            <View style={styles.optionIcon}>
               <Monitor color={colors.primary} size={20} />
             </View>
             <Text style={[styles.optionText, { color: colors.text }]}>시스템 설정</Text>
