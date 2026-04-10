@@ -1,8 +1,8 @@
 import React, { useRef } from 'react';
-import { StyleSheet, View, Text, Modal, TouchableOpacity, ScrollView, Dimensions, Animated } from 'react-native';
+import { StyleSheet, View, Text, Modal, TouchableOpacity, ScrollView, Dimensions, Animated, Image } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { SPACING, BORDER_RADIUS } from '../constants/theme';
-import { X, Clock, Repeat, CheckSquare, Cloud } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -13,27 +13,27 @@ interface HowToUseModalProps {
 
 const GUIDE_DATA = [
   {
-    title: '나만의 원형 일정',
-    description: '하루 24시간을 직관적인 원형 시계로 관리해 보세요. 주간 설정을 통해 매일 혹은 특정 요일의 일정을 미리 채울 수 있습니다.',
-    icon: Clock,
+    title: '오늘의 일정 관리',
+    description: '원형 시간표와 목록을 통해 오늘의 일정을 한눈에 파악하고 수행도를 체크하세요.',
+    image: require('../../assets/guide/guide_1.png'),
     color: '#6366F1',
   },
   {
-    title: '지속적인 루틴',
-    description: '공부, 운동 등 꾸준히 반복해야 할 일들을 루틴으로 등록하세요. 완료한 루틴은 하단 완료 목록에서 확인할 수 있습니다.',
-    icon: Repeat,
+    title: '항목 편집 및 관리',
+    description: '드래그로 순서를 바꾸고, 밀어서 삭제하세요. 터치하면 상세 정보를 수정할 수 있습니다.',
+    image: require('../../assets/guide/guide_2.png'),
     color: '#8B5CF6',
   },
   {
-    title: '스마트한 투두',
-    description: '그날그날의 할 일을 추가하고 관리하세요. 미완료된 투두는 복원 기능을 통해 다음 날로 간편하게 옮길 수 있습니다.',
-    icon: CheckSquare,
+    title: '주간 일정표 활용',
+    description: '달력에서 주간 진행도를 확인하고, 특정 날짜를 터치해 상세 시간표를 확인하세요.',
+    image: require('../../assets/guide/guide_3.png'),
     color: '#10B981',
   },
   {
-    title: '데이터 안전 백업',
-    description: '소중한 기록들을 구글 드라이브에 안전하게 보관하세요. 기기를 변경해도 언제든 이전 데이터를 불러올 수 있습니다.',
-    icon: Cloud,
+    title: '할 일 및 기록 확인',
+    description: '할 일의 연속 수행 기록(스트릭)을 확인하고, 지난 성취 기록을 달력으로 되돌아보세요.',
+    image: require('../../assets/guide/guide_4.png'),
     color: '#3B82F6',
   },
 ];
@@ -48,7 +48,7 @@ export default function HowToUseModal({ visible, onClose }: HowToUseModalProps) 
       <View style={styles.overlay}>
         <View style={[styles.container, { backgroundColor: colors.surface }]}>
           <View style={styles.header}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>사용 방법 안내</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>앱 사용 가이드</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <X color={colors.textSecondary} size={24} />
             </TouchableOpacity>
@@ -67,8 +67,12 @@ export default function HowToUseModal({ visible, onClose }: HowToUseModalProps) 
           >
             {GUIDE_DATA.map((item, index) => (
               <View key={index} style={styles.slide}>
-                <View style={[styles.iconWrapper, { backgroundColor: item.color + '15' }]}>
-                  <item.icon size={60} color={item.color} strokeWidth={1.5} />
+                <View style={[styles.imageWrapper, { backgroundColor: colors.background }]}>
+                  <Image 
+                    source={item.image} 
+                    style={styles.guideImage} 
+                    resizeMode="contain" 
+                  />
                 </View>
                 <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
                 <Text style={[styles.description, { color: colors.textSecondary }]}>
@@ -127,7 +131,7 @@ const styles = StyleSheet.create({
   },
   container: {
     width: '100%',
-    maxHeight: 520,
+    maxHeight: 600, // 이미지를 위해 높이를 약간 상향 조정
     borderRadius: BORDER_RADIUS.xl,
     overflow: 'hidden',
     elevation: 10,
@@ -156,26 +160,31 @@ const styles = StyleSheet.create({
   slide: {
     width: SCREEN_WIDTH - SPACING.xl * 2,
     paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.xl,
+    paddingVertical: SPACING.lg,
     alignItems: 'center',
   },
-  iconWrapper: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+  imageWrapper: {
+    width: '100%',
+    aspectRatio: 1, // 정사각형 비율 유지
+    borderRadius: BORDER_RADIUS.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
+    overflow: 'hidden',
+  },
+  guideImage: {
+    width: '100%',
+    height: '100%',
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
     textAlign: 'center',
   },
   description: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
     opacity: 0.8,
     paddingHorizontal: SPACING.sm,
@@ -188,7 +197,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.md,
   },
   indicator: {
     height: 8,
